@@ -1,4 +1,4 @@
-# DockWorker
+# DockWorker for Daemon Applications
 ## Build, Develop, Deploy... Better
 Dockworker provides web application developers, site builders and operational engineers a single technical entrypoint with a consistent, unified workflow regardless of the framework.
 
