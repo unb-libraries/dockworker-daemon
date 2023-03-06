@@ -39,19 +39,40 @@ class DockworkerShellCommands extends DockworkerCommands
       ]
     ): void
     {
-        $this->initShellCommand($options['env']);
-        $container = $this->getDeployedContainer($options['env']);
-        $this->dockworkerIO->title('Opening Shell');
-        $this->dockworkerIO->info(
-            sprintf(
-                'Opening shell in %s/%s. Type \'exit\' to close.',
-                $options['env'],
-                $container->getContainerName()
-            )
+        $this->executeContainerCommand(
+          $options['env'],
+          [$this->getApplicationShell()],
+          $this->dockworkerIO,
+          'Opening Shell',
+          sprintf(
+            'Opening shell in %s. Type \'exit\' to close.',
+            $options['env']
+          )
         );
+    }
+
+    /**
+     * Executes a command in the container.
+     */
+    protected function executeContainerCommand(
+      $env,
+      $command,
+      $io,
+      $title = '',
+      $message = ''
+    ): void
+    {
+        $this->initShellCommand($env);
+        $container = $this->getDeployedContainer($env);
+        if (!empty($title)) {
+            $io->title($title);
+        }
+        if (!empty($message)) {
+            $io->info($message);
+        }
         $container->run(
-            [$this->getApplicationShell()],
-            $this->dockworkerIO
+          $command,
+          $io
         );
     }
 
