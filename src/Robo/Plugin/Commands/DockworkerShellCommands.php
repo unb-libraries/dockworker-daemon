@@ -59,21 +59,53 @@ class DockworkerShellCommands extends DockworkerCommands
       $command,
       $io,
       $title = '',
-      $message = ''
+      $message = '',
+      $init = true
     ): void
     {
-        $this->initShellCommand($env);
+        if ($init) {
+            $this->initShellCommand($env);
+        }
         $container = $this->getDeployedContainer($env);
         if (!empty($title)) {
             $io->title($title);
         }
         if (!empty($message)) {
-            $io->info($message);
+            $io->say($message);
         }
         $container->run(
           $command,
           $io
         );
+    }
+
+    protected function executeContainerCommandSet(
+        $env,
+        array $commands,
+        $io,
+        $title = '',
+    ): void
+    {
+        $first_command = true;
+        foreach ($commands as $command) {
+            if ($first_command) {
+                $title_string = $title;
+                $needs_init = true;
+                $first_command = false;
+            }
+            else {
+                $title_string = '';
+                $needs_init = false;
+            }
+            $this->executeContainerCommand(
+              $env,
+              $command['command'],
+              $io,
+              $title_string,
+              $command['message'],
+              $needs_init
+            );
+        }
     }
 
     /**
