@@ -5,7 +5,6 @@ namespace Dockworker\Robo\Plugin\Commands;
 use Dockworker\Cli\DockerCliTrait;
 use Dockworker\Cli\KubectlCliTrait;
 use Dockworker\Docker\DockerComposeTrait;
-use Dockworker\Docker\DockerImageBuilderTrait;
 use Dockworker\DockworkerCommands;
 use Dockworker\IO\DockworkerIOTrait;
 use Dockworker\System\LocalHostFileOperationsTrait;
