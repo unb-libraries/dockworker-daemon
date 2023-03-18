@@ -8,7 +8,6 @@ use Dockworker\Docker\DeployedLocalResourcesTrait;
 use Dockworker\DockworkerCommands;
 use Dockworker\GitHub\GitHubClientTrait;
 use Dockworker\K8s\DeployedK8sResourcesTrait;
-use Dockworker\StackExchange\StackExchangeTeamClientTrait;
 use Robo\Robo;
 
 /**
@@ -21,7 +20,6 @@ class DockworkerShellCommands extends DockworkerCommands
     use DockerCliTrait;
     use GitHubClientTrait;
     use KubectlCliTrait;
-    use StackExchangeTeamClientTrait;
 
     /**
      * Opens a shell into the application.
