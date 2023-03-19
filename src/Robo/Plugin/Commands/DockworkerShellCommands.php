@@ -64,7 +64,10 @@ class DockworkerShellCommands extends DockworkerCommands
         if ($init) {
             $this->initShellCommand($env);
         }
-        $container = $this->getDeployedContainer($env);
+        $container = $this->getDeployedContainer(
+            $io,
+            $env
+        );
         if (!empty($title)) {
             $io->title($title);
         }
