@@ -33,6 +33,8 @@ trait DockerContainerExecTrait
      *   The message to display.
      * @param bool $init
      *   Whether to initialize the command.
+     * @param bool $use_tty
+     *   TRUE to attach to a TTY for the command.
      */
     protected function executeContainerCommand(
         string $env,
@@ -40,7 +42,8 @@ trait DockerContainerExecTrait
         DockworkerIO $io,
         string $title = '',
         string $message = '',
-        bool $init = true
+        bool $init = true,
+        bool $use_tty = true
     ): void {
         if ($init) {
             $this->initContainerExecCommand($io, $env);
@@ -57,7 +60,8 @@ trait DockerContainerExecTrait
         }
         $container->run(
             $command,
-            $io
+            $io,
+            $use_tty
         );
     }
 
@@ -95,8 +99,9 @@ trait DockerContainerExecTrait
                 $command['command'],
                 $io,
                 $title_string,
-                $command['message'],
-                $needs_init
+                $command['message'] ?? '',
+                $needs_init,
+                $command['use_tty'] ?? true
             );
         }
     }
