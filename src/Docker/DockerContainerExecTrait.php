@@ -137,4 +137,26 @@ trait DockerContainerExecTrait
             $env
         );
     }
+
+    /**
+     * Initializes, performs container discovery, returning a container.
+     *
+     * @param \Dockworker\IO\DockworkerIO $io
+     *   The IO to use for input and output.
+     * @param string $env
+     *   The environment to initialize.
+     *
+     * @return \Dockworker\Docker\DockerContainer|null
+     *   The container.
+     */
+    protected function initGetDeployedContainer(
+        DockworkerIO $io,
+        string $env
+    ): DockerContainer|null {
+        $this->initContainerExecCommand($io, $env);
+        return $this->getDeployedContainer(
+            $io,
+            $env
+        );
+    }
 }
