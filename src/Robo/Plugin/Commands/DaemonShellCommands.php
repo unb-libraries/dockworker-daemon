@@ -14,7 +14,7 @@ class DaemonShellCommands extends DockworkerDaemonCommands
     use DockerContainerExecTrait;
 
     /**
-     * Opens a shell into the application.
+     * Opens a shell into this application.
      *
      * @option string $env
      *   The environment to open the shell in.

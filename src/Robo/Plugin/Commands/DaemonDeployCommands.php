@@ -33,7 +33,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
     }
 
     /**
-     * Deploys the application locally.
+     * Deploys this application locally.
      *
      * @command application:deploy
      * @aliases deploy redeploy start-over
