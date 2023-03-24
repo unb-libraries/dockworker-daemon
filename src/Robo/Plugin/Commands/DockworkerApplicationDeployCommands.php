@@ -6,14 +6,14 @@ use Dockworker\Cli\DockerCliTrait;
 use Dockworker\Cli\KubectlCliTrait;
 use Dockworker\Core\CommandLauncherTrait;
 use Dockworker\Docker\DockerComposeTrait;
-use Dockworker\DockworkerCommands;
+use Dockworker\DockworkerDaemonCommands;
 use Dockworker\IO\DockworkerIOTrait;
 use Dockworker\System\LocalHostFileOperationsTrait;
 
 /**
  * Provides commands for building and deploying the application locally.
  */
-class DockworkerApplicationDeployCommands extends DockworkerCommands
+class DockworkerApplicationDeployCommands extends DockworkerDaemonCommands
 {
     use CommandLauncherTrait;
     use DockerCliTrait;

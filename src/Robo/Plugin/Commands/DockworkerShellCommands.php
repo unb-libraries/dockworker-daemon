@@ -3,13 +3,13 @@
 namespace Dockworker\Robo\Plugin\Commands;
 
 use Dockworker\Docker\DockerContainerExecTrait;
-use Dockworker\DockworkerCommands;
+use Dockworker\DockworkerDaemonCommands;
 use Robo\Robo;
 
 /**
  * Provides commands for opening a shell into the application's deployed resources.
  */
-class DockworkerShellCommands extends DockworkerCommands
+class DockworkerShellCommands extends DockworkerDaemonCommands
 {
     use DockerContainerExecTrait;
 
