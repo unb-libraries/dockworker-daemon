@@ -9,7 +9,7 @@ use Robo\Robo;
 /**
  * Provides commands for opening a shell into the application's deployed resources.
  */
-class DockworkerShellCommands extends DockworkerDaemonCommands
+class DaemonShellCommands extends DockworkerDaemonCommands
 {
     use DockerContainerExecTrait;
 

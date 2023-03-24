@@ -13,7 +13,7 @@ use Dockworker\System\LocalHostFileOperationsTrait;
 /**
  * Provides commands for building and deploying the application locally.
  */
-class DockworkerApplicationDeployCommands extends DockworkerDaemonCommands
+class DaemonDeployCommands extends DockworkerDaemonCommands
 {
     use CommandLauncherTrait;
     use DockerCliTrait;
