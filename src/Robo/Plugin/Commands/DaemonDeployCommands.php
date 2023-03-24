@@ -79,7 +79,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
             $this->dockworkerIO->error('Application deploy failed.');
             exit(1);
         }
-        $cmd->stop();
+        $cmd->stop(2);
     }
 
     /**
