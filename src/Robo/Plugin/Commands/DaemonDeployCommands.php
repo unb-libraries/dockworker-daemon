@@ -60,6 +60,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
      */
     protected function monitorLocalDaemonReadiness(): void
     {
+        $this->dockworkerIO->section("Application Readiness");
         $this->say("Waiting for $this->applicationFrameworkName to be ready...");
         $cmd = [
             'run',
@@ -114,6 +115,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
         }
         $cmd->stop(1);
         $this->say('Container startup complete.');
+        $this->dockworkerIO->newLine();
     }
 
     /**
