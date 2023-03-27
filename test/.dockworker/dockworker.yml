@@ -9,7 +9,7 @@ dockworker:
     framework:
       name: nginx
       version: 1.22
-      startup_finished_marker: '99_zz_notify_user_URI'
+      startup_finished_marker: '99_z_report_completion'
       endpoint:
         name: http
         port: 80
