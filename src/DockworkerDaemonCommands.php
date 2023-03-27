@@ -12,6 +12,14 @@ use Robo\Robo;
  */
 class DockworkerDaemonCommands extends DockworkerCommands
 {
+
+    /**
+     * The name of the application framework/Daemon.
+     *
+     * @var string
+     */
+    protected string $applicationFrameworkName;
+
     /**
      * The user-facing endpoint port for the application.
      *
@@ -57,6 +65,11 @@ class DockworkerDaemonCommands extends DockworkerCommands
             $config,
             'applicationUuid',
             'dockworker.application.identifiers.uuid'
+        );
+        $this->setPropertyFromConfigKey(
+            $config,
+            'applicationFrameworkName',
+            'dockworker.application.framework.name'
         );
         $this->setPropertyFromConfigKey(
             $config,

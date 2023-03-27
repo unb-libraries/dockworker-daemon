@@ -60,7 +60,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
      */
     protected function monitorLocalDaemonReadiness(): void
     {
-        $this->say("Waiting for $this->applicationName to be ready...");
+        $this->say("Waiting for $this->applicationFrameworkName to be ready...");
         $cmd = [
             'run',
             "--network=$this->applicationName",
@@ -74,16 +74,16 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
         try {
             $this->dockerRun(
                 $cmd,
-                "Waiting for $this->applicationName to be ready...",
+                "Waiting for $this->applicationFrameworkName to be ready...",
                 $timeout = $this->applicationReadinessTimeout,
                 false
             );
-            $this->say("$this->applicationName is ready!");
+            $this->say("$this->applicationFrameworkName is ready!");
         } catch (\Exception $e) {
             $this->dockworkerIO->newLine();
-            $this->say("$this->applicationName not ready...");
+            $this->say("Timeout waiting for $this->applicationFrameworkName!");
             $this->showComposeApplicationLogs();
-            $this->dockworkerIO->error("$this->applicationName failed to ready after {$this->applicationReadinessTimeout}s.");
+            $this->dockworkerIO->error("$this->applicationFrameworkName failed to ready after {$this->applicationReadinessTimeout}s.");
             exit(1);
         }
     }
