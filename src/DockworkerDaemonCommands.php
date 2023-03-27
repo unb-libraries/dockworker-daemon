@@ -3,6 +3,7 @@
 namespace Dockworker;
 
 use Dockworker\DockworkerCommands;
+use Robo\Robo;
 
 /**
  * Defines a base abstract class for all dockworker-daemon commands.
@@ -11,6 +12,20 @@ use Dockworker\DockworkerCommands;
  */
 class DockworkerDaemonCommands extends DockworkerCommands
 {
+    /**
+     * The user-facing endpoint port for the application.
+     *
+     * @var string
+     */
+    protected string $applicationPort;
+
+    /**
+     * The maximum time to wait fo the daemon to startup.
+     *
+     * @var string
+     */
+    protected string $applicationReadinessTimeout;
+
     /**
      * The UNB Libraries application uuid for the application.
      *
@@ -27,6 +42,7 @@ class DockworkerDaemonCommands extends DockworkerCommands
     public function __construct()
     {
         parent::__construct();
+        $this->setDaemonProperties();
     }
 
     /**
@@ -41,6 +57,16 @@ class DockworkerDaemonCommands extends DockworkerCommands
             $config,
             'applicationUuid',
             'dockworker.application.identifiers.uuid'
+        );
+        $this->setPropertyFromConfigKey(
+            $config,
+            'applicationPort',
+            'dockworker.application.framework.endpoint.port'
+        );
+        $this->setPropertyFromConfigKey(
+            $config,
+            'applicationReadinessTimeout',
+            'dockworker.application.framework.endpoint.readiness_timeout'
         );
     }
 }

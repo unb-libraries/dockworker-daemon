@@ -51,8 +51,41 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
         );
         $this->buildComposeApplication();
         $this->startComposeApplication();
-        $this->monitorLocalDeploymentProgress();
-        $this->say('Application deployment complete.');
+        $this->monitorLocalStartupProgress();
+        $this->monitorLocalDaemonReadiness();
+    }
+
+    /**
+     * Monitors the local deployment daemon readiness.
+     */
+    protected function monitorLocalDaemonReadiness(): void
+    {
+        $this->say("Waiting for $this->applicationName to be ready...");
+        $cmd = [
+            'run',
+            "--network=$this->applicationName",
+            '--rm',
+            'dokku/wait',
+            '-t',
+            '300',
+            '-c',
+            "$this->applicationName:$this->applicationPort"
+        ];
+        try {
+            $this->dockerRun(
+                $cmd,
+                "Waiting for $this->applicationName to be ready...",
+                $timeout = $this->applicationReadinessTimeout,
+                false
+            );
+            $this->say("$this->applicationName is ready!");
+        } catch (\Exception $e) {
+            $this->dockworkerIO->newLine();
+            $this->say("$this->applicationName not ready...");
+            $this->showComposeApplicationLogs();
+            $this->dockworkerIO->error("$this->applicationName failed to ready after {$this->applicationReadinessTimeout}s.");
+            exit(1);
+        }
     }
 
     /**
@@ -60,7 +93,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
      *
      * @throws \Dockworker\DockworkerException
      */
-    private function monitorLocalDeploymentProgress(): void
+    private function monitorLocalStartupProgress(): void
     {
         $this->dockworkerIO->section("[local] Application Deployment");
         $cmd = $this->startLocalDeploymentLogFollowingCommand();
@@ -79,7 +112,8 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
             $this->dockworkerIO->error('Application deploy failed.');
             exit(1);
         }
-        $cmd->stop(2);
+        $cmd->stop(1);
+        $this->say('Container startup complete.');
     }
 
     /**

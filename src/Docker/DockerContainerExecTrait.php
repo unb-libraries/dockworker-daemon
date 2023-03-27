@@ -36,8 +36,8 @@ trait DockerContainerExecTrait
      * @param bool $use_tty
      *   TRUE to attach to a TTY for the command.
      *
-     * @return \Dockworker\Docker\DockerContainer|null
-     *   The container the command was executed in.
+     * @return array
+     *   An array containing the container and the command result.
      */
     protected function executeContainerCommand(
         string $env,
@@ -47,7 +47,7 @@ trait DockerContainerExecTrait
         string $message = '',
         bool $init = true,
         bool $use_tty = true
-    ): DockerContainer|null {
+    ): array {
         if ($init) {
             $this->initContainerExecCommand($io, $env);
         }
@@ -61,12 +61,12 @@ trait DockerContainerExecTrait
         if (!empty($message)) {
             $io->say($message);
         }
-        $container->run(
+        $cmd = $container->run(
             $command,
             $io,
             $use_tty
         );
-        return $container;
+        return [$container, $cmd];
     }
 
     /**
