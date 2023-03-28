@@ -24,20 +24,19 @@ class DaemonShellCommands extends DockworkerDaemonCommands
      * @usage --env=prod
      */
     public function openApplicationShell(
-      array $options = [
-        'env' => 'local',
-      ]
-    ): void
-    {
+        array $options = [
+            'env' => 'local',
+        ]
+    ): void {
         $this->executeContainerCommand(
-          $options['env'],
-          [$this->getApplicationShell()],
-          $this->dockworkerIO,
-          'Opening Shell',
-          sprintf(
-            'Opening shell in %s. Type \'exit\' to close.',
-            $options['env']
-          )
+            $options['env'],
+            [$this->getApplicationShell()],
+            $this->dockworkerIO,
+            'Opening Shell',
+            sprintf(
+                'Opening shell in %s. Type \'exit\' to close.',
+                $options['env']
+            )
         );
     }
 

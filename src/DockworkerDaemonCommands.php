@@ -12,7 +12,6 @@ use Robo\Robo;
  */
 class DockworkerDaemonCommands extends DockworkerCommands
 {
-
     /**
      * The name of the application framework/Daemon.
      *

@@ -10,6 +10,7 @@ use Dockworker\Docker\DockerComposeTrait;
 use Dockworker\DockworkerDaemonCommands;
 use Dockworker\IO\DockworkerIOTrait;
 use Dockworker\System\LocalHostFileOperationsTrait;
+use Exception;
 
 /**
  * Provides commands for building and deploying the application locally.
@@ -80,19 +81,19 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
                 false
             );
             $this->say("$this->applicationFrameworkName is ready!");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->dockworkerIO->newLine();
             $this->say("Timeout waiting for $this->applicationFrameworkName!");
             $this->showComposeApplicationLogs();
-            $this->dockworkerIO->error("$this->applicationFrameworkName failed to ready after {$this->applicationReadinessTimeout}s.");
+            $this->dockworkerIO->error(
+                "$this->applicationFrameworkName failed to ready after {$this->applicationReadinessTimeout}s."
+            );
             exit(1);
         }
     }
 
     /**
      * Monitors the local deployment progress.
-     *
-     * @throws \Dockworker\DockworkerException
      */
     private function monitorLocalStartupProgress(): void
     {
@@ -100,7 +101,10 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
         $cmd = $this->startLocalDeploymentLogFollowingCommand();
         $error_found = false;
         while (
-           !str_contains($cmd->getOutput(), '99_z_report_completion')
+            !str_contains(
+                $cmd->getOutput(),
+                '99_z_report_completion'
+            )
         ) {
             if ($this->outputHasErrors($cmd->getOutput())) {
                 $error_found = true;
@@ -123,7 +127,8 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
      *
      * @return \Dockworker\Cli\CliCommand
      */
-    private function startLocalDeploymentLogFollowingCommand(): CliCommand {
+    private function startLocalDeploymentLogFollowingCommand(): CliCommand
+    {
         $cmd = $this->getLocalDeploymentLogFollowingCommand();
         $name = $this->applicationName;
         $cmd->start(function ($type, $buffer) use ($name) {
@@ -141,9 +146,13 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
     /**
      * Gets the local deployment log following command.
      *
+     * @param int $timeout
+     *   The timeout for the command.
+     *
      * @return \Dockworker\Cli\CliCommand
      */
-    private function getLocalDeploymentLogFollowingCommand($timeout = 300): CliCommand {
+    private function getLocalDeploymentLogFollowingCommand(int $timeout = 300): CliCommand
+    {
         return new CliCommand(
             [
                 'docker',
@@ -169,7 +178,8 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
      * @return bool
      *   TRUE if the output has errors, FALSE otherwise.
      */
-    private function outputHasErrors(string $output): bool {
+    private function outputHasErrors(string $output): bool
+    {
         return str_contains($output, 'ERROR');
     }
 }

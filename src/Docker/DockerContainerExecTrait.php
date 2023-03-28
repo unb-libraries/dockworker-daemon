@@ -93,8 +93,7 @@ trait DockerContainerExecTrait
                 $title_string = $title;
                 $needs_init = true;
                 $first_command = false;
-            }
-            else {
+            } else {
                 $title_string = '';
                 $needs_init = false;
             }
@@ -121,8 +120,7 @@ trait DockerContainerExecTrait
     protected function initContainerExecCommand(
         DockworkerIO $io,
         string $env
-    ): void
-    {
+    ): void {
         if ($env === 'local') {
             $this->registerDockerCliTool($io);
             $this->enableLocalResourceDiscovery();
