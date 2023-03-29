@@ -42,6 +42,13 @@ class DockworkerDaemonCommands extends DockworkerCommands
     protected string $applicationUuid;
 
     /**
+     * The marker in the logs inidicating the container has started up.
+     *
+     * @var string
+     */
+    protected string $deploymentFinishedMarker;
+
+    /**
      * DockworkerCommands constructor.
      *
      * @throws \Dockworker\DockworkerException
@@ -79,6 +86,11 @@ class DockworkerDaemonCommands extends DockworkerCommands
             $config,
             'applicationReadinessTimeout',
             'dockworker.application.framework.endpoint.readiness_timeout'
+        );
+        $this->setPropertyFromConfigKey(
+            $config,
+            'deploymentFinishedMarker',
+            'dockworker.application.framework.startup_finished_marker'
         );
     }
 }

@@ -110,7 +110,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
         while (
             !str_contains(
                 $cmd->getOutput(),
-                '99_z_report_completion'
+                $this->deploymentFinishedMarker
             )
         ) {
             if (
