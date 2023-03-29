@@ -2,6 +2,8 @@
 
 namespace Dockworker\Robo\Plugin\Commands;
 
+use Consolidation\AnnotatedCommand\Events\CustomEventAwareInterface;
+use Consolidation\AnnotatedCommand\Events\CustomEventAwareTrait;
 use Dockworker\Cli\CliCommand;
 use Dockworker\Cli\DockerCliTrait;
 use Dockworker\Cli\KubectlCliTrait;
@@ -9,20 +11,23 @@ use Dockworker\Core\CommandLauncherTrait;
 use Dockworker\Docker\DockerComposeTrait;
 use Dockworker\DockworkerDaemonCommands;
 use Dockworker\IO\DockworkerIOTrait;
+use Dockworker\Logs\LogCheckerTrait;
 use Dockworker\System\LocalHostFileOperationsTrait;
 use Exception;
 
 /**
  * Provides commands for building and deploying the application locally.
  */
-class DaemonDeployCommands extends DockworkerDaemonCommands
+class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEventAwareInterface
 {
     use CommandLauncherTrait;
+    use CustomEventAwareTrait;
     use DockerCliTrait;
     use DockerComposeTrait;
     use DockworkerIOTrait;
     use KubectlCliTrait;
     use LocalHostFileOperationsTrait;
+    use LogCheckerTrait;
 
   /**
    * @hook post-init
@@ -99,14 +104,23 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
     {
         $this->dockworkerIO->section("[local] Application Deployment");
         $cmd = $this->startLocalDeploymentLogFollowingCommand();
+        [$errors_pattern, $exceptions_pattern] = $this->getDeploymentLogErrorStrings();
         $error_found = false;
+        $matches = [];
         while (
             !str_contains(
                 $cmd->getOutput(),
                 '99_z_report_completion'
             )
         ) {
-            if ($this->outputHasErrors($cmd->getOutput())) {
+            if (
+                $this->logsHaveErrors(
+                    $cmd->getOutput(),
+                    $errors_pattern,
+                    $exceptions_pattern,
+                    $matches
+                )
+            ) {
                 $error_found = true;
                 break;
             }
@@ -114,7 +128,12 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
         }
         if ($error_found) {
             $cmd->signal(9);
-            $this->dockworkerIO->error('Application deploy failed.');
+            $this->dockworkerIO->error(
+                sprintf(
+                    'Application deploy failed. [%s] found in output.',
+                    $matches[0]
+                )
+            );
             exit(1);
         }
         $cmd->stop(1);
@@ -170,16 +189,50 @@ class DaemonDeployCommands extends DockworkerDaemonCommands
     }
 
     /**
-     * Checks if the output has errors.
+     * Gets the error strings to check for in the deployment logs.
      *
-     * @param string $output
-     *   The output to check.
+     * Calls the custom event handler dockworker-logs-errors-exceptions.
+     * Implementing functions should return an array of two arrays, the first
+     * containing error strings, and the second containing exception strings.
      *
-     * @return bool
-     *   TRUE if the output has errors, FALSE otherwise.
+     * Implementations wishing to describe the error strings in code should
+     * define an associative array with the key being the description and the
+     * value being the error string. Then, the array can be cast to a
+     * non-associative array using array_values().
+     *
+     * @return array
+     *   An array of error strings and exception strings.
      */
-    private function outputHasErrors(string $output): bool
+    public function getDeploymentLogErrorStrings(): array
     {
-        return str_contains($output, 'ERROR');
+        $errors = [
+                'error',
+                'fail',
+                'fatal',
+                'unable',
+                'unavailable',
+                'unrecognized',
+                'unresolved',
+                'unsuccessful',
+                'unsupported',
+        ];
+        $exceptions = [];
+
+        $handlers = $this->getCustomEventHandlers('dockworker-logs-errors-exceptions');
+        foreach ($handlers as $handler) {
+            [$new_errors, $new_exceptions] = $handler();
+            $errors = array_merge(
+                $errors,
+                $new_errors
+            );
+            $exceptions = array_merge(
+                $exceptions,
+                $new_exceptions
+            );
+        }
+        return [
+            implode('|', $errors),
+            implode('|', $exceptions),
+        ];
     }
 }
