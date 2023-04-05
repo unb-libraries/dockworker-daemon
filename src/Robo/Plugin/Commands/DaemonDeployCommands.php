@@ -106,19 +106,21 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
         $cmd = $this->startLocalDeploymentLogFollowingCommand();
         [$errors_pattern, $exceptions_pattern] = $this->getDeploymentLogErrorStrings();
         $error_found = false;
-        $matches = [];
+        $incremental_output = '';
+        $matched_error = '';
         while (
             !str_contains(
-                $cmd->getOutput(),
+                $incremental_output,
                 $this->deploymentFinishedMarker
             )
         ) {
+            $incremental_output = $cmd->getIncrementalOutput();
             if (
                 $this->logsHaveErrors(
-                    $cmd->getOutput(),
+                    $incremental_output,
                     $errors_pattern,
                     $exceptions_pattern,
-                    $matches
+                    $matched_error
                 )
             ) {
                 $error_found = true;
@@ -131,7 +133,13 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
             $this->dockworkerIO->error(
                 sprintf(
                     'Application deploy failed. [%s] found in output.',
-                    $matches[0]
+                    trim(
+                        str_replace(
+                            "$this->applicationName  |",
+                            '',
+                            $matched_error
+                        )
+                    )
                 )
             );
             exit(1);
