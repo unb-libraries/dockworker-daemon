@@ -2,7 +2,7 @@
 
 namespace Dockworker;
 
-use Dockworker\DockworkerCommands;
+use Dockworker\DockworkerApplicationCommands;
 use Robo\Robo;
 
 /**
@@ -10,15 +10,8 @@ use Robo\Robo;
  *
  * This is not a command class. It should not contain any hooks or commands.
  */
-class DockworkerDaemonCommands extends DockworkerCommands
+class DockworkerDaemonCommands extends DockworkerApplicationCommands
 {
-    /**
-     * The name of the application framework/Daemon.
-     *
-     * @var string
-     */
-    protected string $applicationFrameworkName;
-
     /**
      * The user-facing endpoint port for the application.
      *
@@ -32,14 +25,6 @@ class DockworkerDaemonCommands extends DockworkerCommands
      * @var string
      */
     protected string $applicationReadinessTimeout;
-
-    /**
-     * The UNB Libraries application uuid for the application.
-     *
-     * @link https://systems.lib.unb.ca/wiki/systems:docker:unique-site-uuids UNB Libraries UUIDs
-     * @var string
-     */
-    protected string $applicationUuid;
 
     /**
      * The marker in the logs inidicating the container has started up.
@@ -67,16 +52,6 @@ class DockworkerDaemonCommands extends DockworkerCommands
     public function setDaemonProperties(): void
     {
         $config = Robo::config();
-        $this->setPropertyFromConfigKey(
-            $config,
-            'applicationUuid',
-            'dockworker.application.identifiers.uuid'
-        );
-        $this->setPropertyFromConfigKey(
-            $config,
-            'applicationFrameworkName',
-            'dockworker.application.framework.name'
-        );
         $this->setPropertyFromConfigKey(
             $config,
             'applicationPort',

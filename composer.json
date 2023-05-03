@@ -14,7 +14,7 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require": {
-    "unb-libraries/dockworker": "6.x-dev"
+    "unb-libraries/dockworker-application": "6.x-dev"
   },
   "license": "MIT",
   "authors": [
