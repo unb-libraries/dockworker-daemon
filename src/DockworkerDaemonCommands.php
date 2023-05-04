@@ -2,8 +2,10 @@
 
 namespace Dockworker;
 
+use Consolidation\AnnotatedCommand\AnnotationData;
 use Dockworker\DockworkerApplicationCommands;
 use Robo\Robo;
+use Symfony\Component\Console\Input\InputInterface;
 
 /**
  * Defines a base abstract class for all dockworker-daemon commands.
@@ -34,13 +36,11 @@ class DockworkerDaemonCommands extends DockworkerApplicationCommands
     protected string $deploymentFinishedMarker;
 
     /**
-     * DockworkerCommands constructor.
-     *
-     * @throws \Dockworker\DockworkerException
+     * @hook pre-init
      */
-    public function __construct()
+    public function initOptions(InputInterface $input, AnnotationData $annotationData)
     {
-        parent::__construct();
+        parent::initOptions($input, $annotationData);
         $this->setDaemonProperties();
     }
 
