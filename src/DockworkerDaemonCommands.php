@@ -38,9 +38,9 @@ class DockworkerDaemonCommands extends DockworkerApplicationCommands
     /**
      * @hook pre-init
      */
-    public function initOptions(InputInterface $input, AnnotationData $annotationData)
+    public function initOptions()
     {
-        parent::initOptions($input, $annotationData);
+        parent::initOptions();
         $this->setDaemonProperties();
     }
 
