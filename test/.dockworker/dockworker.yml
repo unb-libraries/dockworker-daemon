@@ -14,8 +14,8 @@ dockworker:
         name: http
         port: 80
         readiness_timeout: 15
-    workflows:
-      vcs:
-        type: github
-        owner: unb-libraries
-        name: test-dockworker
+  workflows:
+    vcs:
+      type: github
+      owner: unb-libraries
+      name: test-dockworker
