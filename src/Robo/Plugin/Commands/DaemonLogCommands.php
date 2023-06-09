@@ -16,6 +16,8 @@ class DaemonLogCommands extends DockworkerDaemonCommands
     /**
      * Obtains the application's logs.
      *
+     * @option string $container
+     *   The container in the stack to retrive logs for.
      * @option string $env
      *   The environment to display the logs for.
      *
@@ -25,6 +27,7 @@ class DaemonLogCommands extends DockworkerDaemonCommands
      */
     public function displayApplicationLogs(
         array $options = [
+            'container' => 'default',
             'env' => 'local',
             'only-startup' => false,
             'output-file' => '',
@@ -32,19 +35,25 @@ class DaemonLogCommands extends DockworkerDaemonCommands
     ): void {
         $logs = $this->getApplicationLogs(
             $this->dockworkerIO,
-            $options['env']
+            $options['env'],
+            $options['container']
         );
 
         if ($options['only-startup']) {
-            $this->extractStartupLogs($logs);
+            if ($options['container'] == 'default') {
+              $this->extractStartupLogs($logs);
+            }
+            else {
+              $this->dockworkerIO->warning("Restricting logs to only-startup is only available for the default container. Ignoring option.");
+            }
         }
 
         if (empty($options['output-file'])) {
-            $this->dockworkerIO->title("Logs for $this->applicationName [$options[env]]");
+            $this->dockworkerIO->title("Logs for $this->applicationName [{$options['env']}/{$options['container']}]");
             $this->dockworkerIO->write($logs);
         }
         else {
-            $this->dockworkerIO->say("Writing logs to {$options['output-file']}...");
+            $this->dockworkerIO->say("Writing [{$options['env']}/{$options['container']}] logs to {$options['output-file']}...");
             file_put_contents($options['output-file'], $logs);
         }
     }
@@ -55,14 +64,23 @@ class DaemonLogCommands extends DockworkerDaemonCommands
      * @return string
      *   The application shell to use.
      */
-    protected function getApplicationLogs($io, $env): string
+    protected function getApplicationLogs($io, $env, $container): string
     {
         $this->initContainerExecCommand($io, $env);
-        $container = $this->getDeployedContainer(
+        $container_obj = $this->getDeployedContainer(
             $io,
-            $env
+            $env,
+            false,
+            true,
+            $container
         );
-        return $container->logs();
+        if (empty($container_obj)) {
+            $this->dockworkerIO->error("No deployed container '$container' found for $this->applicationName [{$env}].");
+            $this->dockworkerIO->say("Available containers:");
+            $this->dockworkerIO->block($this->getExistingContainerNames());
+            exit(1);
+        }
+        return $container_obj->logs();
     }
 
     /**

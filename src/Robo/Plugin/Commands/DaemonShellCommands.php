@@ -16,8 +16,10 @@ class DaemonShellCommands extends DockworkerDaemonCommands
     /**
      * Opens a shell into this application.
      *
+     * @option string $container
+     *   The container in the stack to retrive logs for.
      * @option string $env
-     *   The environment to open the shell in.
+     *   The environment to display the logs for.
      *
      * @command application:shell
      * @aliases shell
@@ -25,6 +27,7 @@ class DaemonShellCommands extends DockworkerDaemonCommands
      */
     public function openApplicationShell(
         array $options = [
+            'container' => 'default',
             'env' => 'local',
         ]
     ): void {
@@ -32,11 +35,15 @@ class DaemonShellCommands extends DockworkerDaemonCommands
             $options['env'],
             [$this->getApplicationShell()],
             $this->dockworkerIO,
-            'Opening Shell',
+            'Opening Shell ',
             sprintf(
-                'Opening shell in %s. Type \'exit\' to close.',
+                'Opening shell in %s/%s. Type \'exit\' to close.',
+                $options['container'],
                 $options['env']
-            )
+            ),
+            true,
+            true,
+            $options['container']
         );
     }
 
@@ -50,7 +57,7 @@ class DaemonShellCommands extends DockworkerDaemonCommands
     {
         return $this->getConfigItem(
             Robo::config(),
-            'dockworker.application.shell.shell',
+            'dockworker.application.shell.path',
             '/bin/sh'
         );
     }

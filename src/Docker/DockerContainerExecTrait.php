@@ -46,14 +46,18 @@ trait DockerContainerExecTrait
         string $title = '',
         string $message = '',
         bool $init = true,
-        bool $use_tty = true
+        bool $use_tty = true,
+        string $name = 'default'
     ): array {
         if ($init) {
             $this->initContainerExecCommand($io, $env);
         }
         $container = $this->getDeployedContainer(
             $io,
-            $env
+            $env,
+            false,
+            true,
+            $name
         );
         if (!empty($title)) {
             $io->title($title);

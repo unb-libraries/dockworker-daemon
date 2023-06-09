@@ -157,7 +157,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
     private function startLocalDeploymentLogFollowingCommand(): CliCommand
     {
         $cmd = $this->getLocalDeploymentLogFollowingCommand();
-        $name = $this->applicationName;
+        $name = $this->applicationSlug;
         $cmd->start(function ($type, $buffer) use ($name) {
             // Stream is colorless here, so make it easier to read.
             $colored_buffer = str_replace(
@@ -186,7 +186,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
                 'compose',
                 'logs',
                 '-f',
-                $this->applicationName,
+                $this->applicationSlug,
             ],
             '',
             $this->applicationRoot,
