@@ -19,7 +19,7 @@ use Exception;
 /**
  * Provides commands for building and deploying the application locally.
  */
-class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEventAwareInterface
+class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements CustomEventAwareInterface
 {
     use CommandLauncherTrait;
     use CustomEventAwareTrait;
