@@ -8,6 +8,7 @@ use Dockworker\Cli\CliCommand;
 use Dockworker\Cli\DockerCliTrait;
 use Dockworker\Cli\KubectlCliTrait;
 use Dockworker\Core\CommandLauncherTrait;
+use Dockworker\Docker\DeployedLocalResourcesTrait;
 use Dockworker\Docker\DockerComposeTrait;
 use Dockworker\DockworkerDaemonCommands;
 use Dockworker\IO\DockworkerIOTrait;
@@ -22,6 +23,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
 {
     use CommandLauncherTrait;
     use CustomEventAwareTrait;
+    use DeployedLocalResourcesTrait;
     use DockerCliTrait;
     use DockerComposeTrait;
     use DockworkerIOTrait;
@@ -156,7 +158,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
      */
     private function startLocalDeploymentLogFollowingCommand(): CliCommand
     {
-        $cmd = $this->getLocalDeploymentLogFollowingCommand();
+        $cmd = $this->getLocalDeploymentLogFollowingCommand($this->applicationSlug);
         $name = $this->applicationSlug;
         $cmd->start(function ($type, $buffer) use ($name) {
             // Stream is colorless here, so make it easier to read.
@@ -178,7 +180,7 @@ class DaemonDeployCommands extends DockworkerDaemonCommands implements CustomEve
      *
      * @return \Dockworker\Cli\CliCommand
      */
-    private function getLocalDeploymentLogFollowingCommand(int $timeout = 300): CliCommand
+    private function getLocalDeploymentLogFollowingCommand(string $name, int $timeout = 300): CliCommand
     {
         return new CliCommand(
             [
