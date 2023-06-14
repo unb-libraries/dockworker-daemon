@@ -41,18 +41,16 @@ class DaemonLogCommands extends DockworkerDaemonCommands
 
         if ($options['only-startup']) {
             if ($options['container'] == 'default') {
-              $this->extractStartupLogs($logs);
-            }
-            else {
-              $this->dockworkerIO->warning("Restricting logs to only-startup is only available for the default container. Ignoring option.");
+                $this->extractStartupLogs($logs);
+            } else {
+                $this->dockworkerIO->warning("Restricting logs to only-startup is only available for the default container. Ignoring option.");
             }
         }
 
         if (empty($options['output-file'])) {
             $this->dockworkerIO->title("Logs for $this->applicationName [{$options['env']}/{$options['container']}]");
             $this->dockworkerIO->write($logs);
-        }
-        else {
+        } else {
             $this->dockworkerIO->say("Writing [{$options['env']}/{$options['container']}] logs to {$options['output-file']}...");
             file_put_contents($options['output-file'], $logs);
         }
