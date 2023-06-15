@@ -78,7 +78,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
             '-t',
             '300',
             '-c',
-            "$this->applicationName:$this->applicationPort"
+            "$this->applicationSlug:$this->applicationPort"
         ];
         try {
             $this->dockerRun(
