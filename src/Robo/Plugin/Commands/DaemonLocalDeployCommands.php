@@ -31,9 +31,9 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     use LocalHostFileOperationsTrait;
     use LogCheckerTrait;
 
-  /**
-   * @hook post-init
-   */
+    /**
+     * @hook post-init
+     */
     public function initDeployRequirements(): void
     {
         $this->registerDockerCliTool($this->dockworkerIO);
@@ -84,7 +84,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
             $this->dockerRun(
                 $cmd,
                 "Waiting for $this->applicationFrameworkName to be ready...",
-                $timeout = $this->applicationReadinessTimeout,
+                $timeout = (float) $this->applicationReadinessTimeout,
                 false
             );
             $this->say("$this->applicationFrameworkName is ready!");
@@ -210,7 +210,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
      * value being the error string. Then, the array can be cast to a
      * non-associative array using array_values().
      *
-     * @return array
+     * @return string[]
      *   An array of error strings and exception strings.
      */
     public function getDeploymentLogErrorStrings(): array

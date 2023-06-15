@@ -16,6 +16,9 @@ class DaemonShellCommands extends DockworkerDaemonCommands
     /**
      * Opens a shell into this application.
      *
+     * @param mixed[] $options
+     *   The options passed to the command.
+     *
      * @option string $container
      *   The container in the stack to retrive logs for.
      * @option string $env

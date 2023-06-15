@@ -4,6 +4,7 @@ namespace Dockworker\Robo\Plugin\Commands;
 
 use Dockworker\Docker\DockerContainerExecTrait;
 use Dockworker\DockworkerDaemonCommands;
+use Dockworker\IO\DockworkerIO;
 use Robo\Robo;
 
 /**
@@ -15,6 +16,9 @@ class DaemonLogCommands extends DockworkerDaemonCommands
 
     /**
      * Obtains the application's logs.
+     *
+     * @param mixed[] $options
+     *   The options passed to the command.
      *
      * @option string $container
      *   The container in the stack to retrive logs for.
@@ -59,11 +63,21 @@ class DaemonLogCommands extends DockworkerDaemonCommands
     /**
      * Gets the application's container logs.
      *
+     * @param \Dockworker\IO\DockworkerIO $io
+     *   The IO to use for input and output.
+     * @param string $env
+     *  The environment to display the logs for.
+     * @param string $container
+     *  The container to display the logs for.
+     *
      * @return string
-     *   The application shell to use.
+     *   The container's logs.
      */
-    protected function getApplicationLogs($io, $env, $container): string
-    {
+    protected function getApplicationLogs(
+        DockworkerIO $io,
+        string $env,
+        string $container
+    ): string {
         $this->initContainerExecCommand($io, $env);
         $container_obj = $this->getDeployedContainer(
             $io,
@@ -84,8 +98,8 @@ class DaemonLogCommands extends DockworkerDaemonCommands
     /**
      * Removes any logs after the deployment finished marker.
      *
-     * @return string
-     *   The application shell to use.
+     * @param string $logs
+     *  The logs to modify.
      */
     protected function extractStartupLogs(&$logs): void
     {
