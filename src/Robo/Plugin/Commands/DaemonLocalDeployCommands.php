@@ -84,6 +84,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
             $this->dockerRun(
                 $cmd,
                 "Waiting for $this->applicationFrameworkName to be ready...",
+                null,
                 $timeout = (float) $this->applicationReadinessTimeout,
                 false
             );
