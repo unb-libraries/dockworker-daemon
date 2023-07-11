@@ -13,6 +13,7 @@ use Dockworker\Docker\DockerComposeTrait;
 use Dockworker\DockworkerDaemonCommands;
 use Dockworker\IO\DockworkerIOTrait;
 use Dockworker\Logs\LogCheckerTrait;
+use Dockworker\Logs\LogErrorStringsTrait;
 use Dockworker\System\LocalHostFileOperationsTrait;
 use Exception;
 
@@ -30,6 +31,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     use KubectlCliTrait;
     use LocalHostFileOperationsTrait;
     use LogCheckerTrait;
+    use LogErrorStringsTrait;
 
     /**
      * @hook post-init
@@ -107,7 +109,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     {
         $this->dockworkerIO->section("[local] Application Deployment");
         $cmd = $this->startLocalDeploymentLogFollowingCommand();
-        [$errors_pattern, $exceptions_pattern] = $this->getDeploymentLogErrorStrings();
+        [$errors_pattern, $exceptions_pattern] = $this->getAllLogErrorStrings();
         $error_found = false;
         $incremental_output = '';
         $matched_error = '';
@@ -197,53 +199,5 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
             null,
             $timeout
         );
-    }
-
-    /**
-     * Gets the error strings to check for in the deployment logs.
-     *
-     * Calls the custom event handler dockworker-logs-errors-exceptions.
-     * Implementing functions should return an array of two arrays, the first
-     * containing error strings, and the second containing exception strings.
-     *
-     * Implementations wishing to describe the error strings in code should
-     * define an associative array with the key being the description and the
-     * value being the error string. Then, the array can be cast to a
-     * non-associative array using array_values().
-     *
-     * @return string[]
-     *   An array of error strings and exception strings.
-     */
-    public function getDeploymentLogErrorStrings(): array
-    {
-        $errors = [
-                'error',
-                'fail',
-                'fatal',
-                'unable',
-                'unavailable',
-                'unrecognized',
-                'unresolved',
-                'unsuccessful',
-                'unsupported',
-        ];
-        $exceptions = [];
-
-        $handlers = $this->getCustomEventHandlers('dockworker-logs-errors-exceptions');
-        foreach ($handlers as $handler) {
-            [$new_errors, $new_exceptions] = $handler();
-            $errors = array_merge(
-                $errors,
-                $new_errors
-            );
-            $exceptions = array_merge(
-                $exceptions,
-                $new_exceptions
-            );
-        }
-        return [
-            implode('|', $errors),
-            implode('|', $exceptions),
-        ];
     }
 }
