@@ -13,7 +13,6 @@ use Dockworker\Docker\DockerComposeTrait;
 use Dockworker\DockworkerDaemonCommands;
 use Dockworker\IO\DockworkerIOTrait;
 use Dockworker\Logs\LogCheckerTrait;
-use Dockworker\Logs\LogErrorStringsTrait;
 use Dockworker\System\LocalHostFileOperationsTrait;
 use Exception;
 
@@ -31,7 +30,6 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     use KubectlCliTrait;
     use LocalHostFileOperationsTrait;
     use LogCheckerTrait;
-    use LogErrorStringsTrait;
 
     /**
      * @hook post-init
