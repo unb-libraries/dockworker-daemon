@@ -112,7 +112,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
         [$errors_pattern, $exceptions_pattern] = $this->getAllLogErrorStrings();
         $error_found = false;
         $incremental_output = '';
-        $matched_error = '';
+        $matched_errors = [];
         while (
             !str_contains(
                 $incremental_output,
@@ -125,7 +125,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
                     $incremental_output,
                     $errors_pattern,
                     $exceptions_pattern,
-                    $matched_error
+                    $matched_errors
                 )
             ) {
                 $error_found = true;
@@ -135,18 +135,8 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
         }
         if ($error_found) {
             $cmd->signal(9);
-            $this->dockworkerIO->error(
-                sprintf(
-                    'Application deploy failed. [%s] found in output.',
-                    trim(
-                        str_replace(
-                            "$this->applicationName  |",
-                            '',
-                            $matched_error
-                        )
-                    )
-                )
-            );
+            $this->reportErrorsInLogs($this->dockworkerIO, $matched_errors);
+            $this->dockworkerIO->error('Application deploy failed.');
             exit(1);
         }
         $cmd->stop(1);
