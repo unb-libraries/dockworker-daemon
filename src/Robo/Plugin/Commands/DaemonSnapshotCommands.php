@@ -42,13 +42,19 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             ],
             $this->dockworkerIO,
             null,
-            'Snapshot List',
+            'Snapshot List :' . $options['env'],
             '',
             true,
             5.0
         );
     }
 
+    /**
+     * Initializes the required bootstrap for a snapshot command.
+     *
+     * @param string $env
+     * @return void
+     */
     protected function initSnapshotCommand(string $env): void
     {
         $this->initRsyncCommand($this->dockworkerIO, $env);
@@ -57,6 +63,11 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         $this->checkPreflightChecks($this->dockworkerIO);
     }
 
+    /**
+     * Initializes the configuration required for snapshot commands.
+     *
+     * @return void
+     */
     protected function initSnapshotConfig(): void
     {
         $this->snapshotHost = $this->getSetApplicationLocalDataConfigurationItem(
@@ -73,12 +84,17 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             'path',
             'Snapshot Path on Host',
             "/mnt/storage0/KubeNFS/$this->applicationSlug/snapshot",
-            'Enter the path on the snapshot host where the snapshots for this application are stored. This path should contain a sub-directory for each environment.',
+            'Enter the path on the snapshot host where the snapshots for this application are stored. This path should contain a sub-directory for each environment (dev, prod).',
             [],
             'SNAPSHOT_SERVER_PATH'
         );
     }
 
+    /**
+     * Registers a preflight check to ensure that the snapshot server is accessible.
+     *
+     * @return void
+     */
     protected function registerPreflightSnapshotConnectionTest(): void
     {
         $this->registerNewPreflightCheck(
@@ -86,7 +102,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             $this->getCliToolPreflightCheckCommand(
                 $this->cliTools['rsync'],
                 [
-                  $this->snapshotHost . ':/',
+                    $this->snapshotHost . ':/',
                 ],
                 'rsync',
                 5.0
@@ -97,7 +113,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             [],
             'etc',
             sprintf(
-                'Could not establish a connection to the snapshot server. Please ensure that you can SSH into the server without a password (i.e. \'ssh %s\').',
+                'Could not establish a connection to the snapshot server. Are you on the VPN? Please ensure that you can SSH into the server without a user or password specified in the ssh command (i.e. \'ssh %s\').',
                 $this->snapshotHost
             )
         );
