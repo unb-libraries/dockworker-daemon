@@ -64,7 +64,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
      *   The environment to install the snapshot in.
      *
      * @command snapshot:install
-     * @usage --source-env=prod --target-env=local
+     * @usage --source-env=prod --target-env=
      */
     public function installSnapshot(
         array $options = [
@@ -97,15 +97,23 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         }
 
         $this->displaySnapshotFiles($options['source-env'], $this->dockworkerIO);
-        if ($this->dockworkerIO->confirm(
+
+        $this->dockworkerIO->warning(
             sprintf(
-                'Are you sure you want to install the listed [%s] snapshot into [%s]? This action is extremely destructive and will remove all data in the [%s] environment.',
-                $options['source-env'],
-                $options['target-env'],
+                'A snapshot installation is extremely destructive and will overwrite all data in the [%s] environment.',
                 $options['target-env']
             )
-        ))
-        {
+        );
+
+        if (
+            $this->dockworkerIO->confirm(
+                sprintf(
+                    'Are you sure you want to install the above-listed [%s] snapshot into [%s]?',
+                    $options['source-env'],
+                    $options['target-env']
+                )
+            )
+        ) {
             $tmp_path = self::createTemporaryLocalStorage();
             $this->copySnapshotsToLocalTmp($tmp_path);
             $container = $this->copySnapshotsToContainer(
