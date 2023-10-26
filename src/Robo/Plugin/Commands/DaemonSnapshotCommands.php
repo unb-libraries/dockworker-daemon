@@ -38,18 +38,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         ]
     ): void {
         $this->initSnapshotCommand($options['env']);
-        $this->executeCliCommand(
-            [
-                $this->cliTools['rsync'],
-                $this->snapshotEnvPath . '/',
-            ],
-            $this->dockworkerIO,
-            null,
-            'Snapshot List :' . $options['env'],
-            '',
-            true,
-            5.0
-        );
+        $this->renderAllSnapshotFiles($options['env']);
     }
 
     /**
@@ -72,31 +61,11 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             'target-env' => 'local',
         ]
     ): void {
-        if ($options['target-env'] === $options['source-env']) {
-            $this->dockworkerIO->warning(
-                sprintf(
-                    'The source [%s] and destination environments [%s] are the same.',
-                    $options['source-env'],
-                    $options['target-env']
-                )
-            );
-            exit(0);
-        }
-
+        $this->validateCommandOptions($options);
         $this->initSnapshotCommand($options['source-env']);
         $this->initContainerExecCommand($this->dockworkerIO, $options['target-env']);
+        $this->renderAllSnapshotFiles($options['source-env']);
 
-        if (empty($this->snapshotFiles)) {
-            $this->dockworkerIO->error(
-                sprintf(
-                    'There are no snapshots available for %s.',
-                    $options['source-env']
-                )
-            );
-            exit(1);
-        }
-
-        $this->displaySnapshotFiles($options['source-env'], $this->dockworkerIO);
 
         $this->dockworkerIO->warning(
             sprintf(
@@ -125,11 +94,63 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     }
 
     /**
+     * Displays all snapshot files for the given environment.
+     *
+     * @param string $env
+     *   The environment to display the snapshots for.
+     */
+    protected function renderAllSnapshotFiles($env): void
+    {
+        if (empty($this->snapshotFiles)) {
+            $this->dockworkerIO->error(
+                sprintf(
+                    'There are no snapshots available for %s.',
+                    $env
+                )
+            );
+            exit(1);
+        }
+        $this->displaySnapshotFiles($env, $this->dockworkerIO);
+    }
+
+    /**
+     * Validates the command option for unreasonable requests.
+     *
+     * @param array $options
+     *   The command options.
+     */
+    protected function validateCommandOptions(array $options): void
+    {
+        if ($options['target-env'] === $options['source-env']) {
+            $this->dockworkerIO->warning(
+                sprintf(
+                    'The source [%s] and destination environments [%s] are the same.',
+                    $options['source-env'],
+                    $options['target-env']
+                )
+            );
+            exit(0);
+        }
+
+        if ($options['target-env'] === $options['source-env']) {
+            $this->dockworkerIO->warning(
+                sprintf(
+                    'The source [%s] and destination environments [%s] are the same.',
+                    $options['source-env'],
+                    $options['target-env']
+                )
+            );
+            exit(0);
+        }
+    }
+
+    /**
      * Executes the generalized import script in the container.
      *
      * @param [type] $container
      */
-    protected function executeImportScript($container): void {
+    protected function executeImportScript($container): void
+    {
         $this->dockworkerIO->title('Installing Snapshot in Container');
         $container->run(
             ['/scripts/importData.sh', '/tmp/snapshot'],
@@ -180,7 +201,8 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
      * @param string $tmp_path
      *   The path to the local tmp dir.
      */
-    protected function copySnapshotsToLocalTmp(string $tmp_path): void {
+    protected function copySnapshotsToLocalTmp(string $tmp_path): void
+    {
         $this->dockworkerIO->title('Copying snapshot to local disk');
         foreach ($this->snapshotFiles as $snapshot_file)
         {
