@@ -53,6 +53,9 @@ trait SnapshotTrait
         $this->setSnapshotFiles($env);
     }
 
+    /**
+     * Sets the total filesize of the snapshot files.
+     */
     protected function setSnapshotFileSize(): void
     {
         foreach ($this->snapshotFiles as $snapshot_file) {
@@ -87,6 +90,12 @@ trait SnapshotTrait
         );
     }
 
+    /**
+     * Sets the snapshot files from the storage server.
+     *
+     * @param string $env
+     *  The environment to retrieve the snapshot files for.
+     */
     protected function setSnapshotFiles(string $env): void
     {
         $snapshot_output = $this->executeCliCommand(
@@ -120,8 +129,18 @@ trait SnapshotTrait
         }
     }
 
-    protected function displaySnapshotFiles(string $env, DockworkerIO $io): void
-    {
+    /**
+     * Displays the snapshot files for the specified environment.
+     *
+     * @param string $env
+     *   The environment to display the snapshot files for.
+     * @param DockworkerIO $io
+     *   The IO to use for input and output.
+     */
+    protected function displaySnapshotFiles(
+        string $env,
+        DockworkerIO $io
+    ): void {
         $io->title("Available Snapshots of $env");
         $io->table(
             ['File', 'Size'],
@@ -131,8 +150,6 @@ trait SnapshotTrait
 
     /**
      * Registers a preflight check to ensure that the snapshot server is accessible.
-     *
-     * @return void
      */
     protected function registerPreflightSnapshotConnectionTest(): void
     {

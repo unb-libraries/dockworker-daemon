@@ -2,6 +2,7 @@
 
 namespace Dockworker\Robo\Plugin\Commands;
 
+use Dockworker\Docker\DockerContainer;
 use Dockworker\Docker\DockerContainerExecTrait;
 use Dockworker\DockworkerDaemonCommands;
 use Dockworker\IO\DockworkerIO;
@@ -85,8 +86,9 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         $this->displaySnapshotFiles($options['source-env'], $this->dockworkerIO);
         if ($this->dockworkerIO->confirm(
             sprintf(
-                'Are you sure you want to install the %s snapshot into %s?',
+                'Are you sure you want to install the listed [%s] snapshot into [%s]? This action is extremely destructive and will remove all data in the [%s] environment.',
                 $options['source-env'],
+                $options['env'],
                 $options['env']
             )
         ))
@@ -101,16 +103,35 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         }
     }
 
-    protected function executeImportScript($container) {
+    /**
+     * Executes the generalized import script in the container.
+     *
+     * @param [type] $container
+     */
+    protected function executeImportScript($container): void {
         $this->dockworkerIO->title('Installing Snapshot in Container');
-        $cmd = $container->run(
+        $container->run(
             ['/scripts/importData.sh', '/tmp/snapshot'],
             $this->dockworkerIO,
             TRUE
         );
     }
 
-    protected function copySnapshotsToContainer($tmp_path, $env) {
+    /**
+     * Copies the snapshot files to the container.
+     *
+     * @param string $snapshot_path
+     *   The path to the snapshot dir.
+     * @param string $env
+     *   The environment to copy the snapshot to.
+     *
+     * @return DockerContainer|null
+     *   The container object, or null if none are available.
+     */
+    protected function copySnapshotsToContainer(
+        string $snapshot_path,
+        string $env
+    ): DockerContainer|null {
         $this->dockworkerIO->title('Copying snapshot to container');
         [$container, $cmd] = $this->executeContainerCommand(
             $env,
@@ -125,14 +146,20 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         {
             $container->copyTo(
                 $this->dockworkerIO,
-                $tmp_path . '/' . $snapshot_file[0],
+                $snapshot_path . '/' . $snapshot_file[0],
                 '/tmp/snapshot/'
             );
         }
         return $container;
     }
 
-    protected function copySnapshotsToLocalTmp($tmp_path) {
+    /**
+     * Copies the snapshot files from the storage server to the local tmp dir.
+     *
+     * @param string $tmp_path
+     *   The path to the local tmp dir.
+     */
+    protected function copySnapshotsToLocalTmp(string $tmp_path): void {
         $this->dockworkerIO->title('Copying snapshot to local disk');
         foreach ($this->snapshotFiles as $snapshot_file)
         {
