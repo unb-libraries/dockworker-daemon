@@ -102,7 +102,7 @@ trait SnapshotTrait
             [
                 $this->cliTools['rsync'],
                 '-ah',
-                '--out-format="%n %l"',
+                '--out-format="%n %l %t"',
                 '--dry-run',
                 $this->snapshotEnvPath . '/*',
                 '.'
@@ -141,9 +141,9 @@ trait SnapshotTrait
         string $env,
         DockworkerIO $io
     ): void {
-        $io->title("Available Snapshots of $env");
+        $io->title("[$env] Snapshot Files");
         $io->table(
-            ['File', 'Size'],
+            ['File', 'Size', 'Date', 'Time (UTC)'],
             $this->snapshotFiles
         );
     }

@@ -58,20 +58,33 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
      * @param mixed[] $options
      *   The options passed to the command.
      *
-     * @option string $env
-     *   The environment to show the snapshots for.
+     * @option string $source-env
+     *   The environment to install the snapshot from.
+     * @option string $target-env
+     *   The environment to install the snapshot in.
      *
      * @command snapshot:install
-     * @usage --env=local
+     * @usage --source-env=prod --target-env=local
      */
     public function installSnapshot(
         array $options = [
-            'env' => 'local',
             'source-env' => 'prod',
+            'target-env' => 'local',
         ]
     ): void {
+        if ($options['target-env'] === $options['source-env']) {
+            $this->dockworkerIO->warning(
+                sprintf(
+                    'The source [%s] and destination environments [%s] are the same.',
+                    $options['source-env'],
+                    $options['target-env']
+                )
+            );
+            exit(0);
+        }
+
         $this->initSnapshotCommand($options['source-env']);
-        $this->initContainerExecCommand($this->dockworkerIO, $options['env']);
+        $this->initContainerExecCommand($this->dockworkerIO, $options['target-env']);
 
         if (empty($this->snapshotFiles)) {
             $this->dockworkerIO->error(
@@ -88,8 +101,8 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             sprintf(
                 'Are you sure you want to install the listed [%s] snapshot into [%s]? This action is extremely destructive and will remove all data in the [%s] environment.',
                 $options['source-env'],
-                $options['env'],
-                $options['env']
+                $options['target-env'],
+                $options['target-env']
             )
         ))
         {
@@ -97,7 +110,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             $this->copySnapshotsToLocalTmp($tmp_path);
             $container = $this->copySnapshotsToContainer(
                 $tmp_path,
-                $options['env']
+                $options['target-env']
             );
             $this->executeImportScript($container);
         }
