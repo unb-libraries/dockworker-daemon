@@ -69,42 +69,35 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             'source-env' => 'prod',
         ]
     ): void {
-        if ($options['env'] == 'local') {
-            $this->initSnapshotCommand($options['source-env']);
-            $this->initContainerExecCommand($this->dockworkerIO, $options['env']);
+        $this->initSnapshotCommand($options['source-env']);
+        $this->initContainerExecCommand($this->dockworkerIO, $options['env']);
 
-            if (empty($this->snapshotFiles)) {
-                $this->dockworkerIO->error(
-                    sprintf(
-                        'There are no snapshots available for %s.',
-                        $options['source-env']
-                    )
-                );
-                exit(1);
-            }
-
-            $this->displaySnapshotFiles($options['source-env'], $this->dockworkerIO);
-            if ($this->dockworkerIO->confirm(
-                sprintf(
-                    'Are you sure you want to install the %s snapshot into %s?',
-                    $options['source-env'],
-                    $options['env']
-                )
-            ))
-            {
-                $tmp_path = self::createTemporaryStorage();
-                $this->copySnapshotsToLocalTmp($tmp_path);
-                $container = $this->copyLocalTmpSnapshotsToContainer($tmp_path);
-                $this->executeImportScript($container);
-            }
-        } else {
+        if (empty($this->snapshotFiles)) {
             $this->dockworkerIO->error(
                 sprintf(
-                    'The only destination supported current is local. You specified %s.',
+                    'There are no snapshots available for %s.',
                     $options['source-env']
                 )
             );
             exit(1);
+        }
+
+        $this->displaySnapshotFiles($options['source-env'], $this->dockworkerIO);
+        if ($this->dockworkerIO->confirm(
+            sprintf(
+                'Are you sure you want to install the %s snapshot into %s?',
+                $options['source-env'],
+                $options['env']
+            )
+        ))
+        {
+            $tmp_path = self::createTemporaryLocalStorage();
+            $this->copySnapshotsToLocalTmp($tmp_path);
+            $container = $this->copySnapshotsToContainer(
+                $tmp_path,
+                $options['env']
+            );
+            $this->executeImportScript($container);
         }
     }
 
@@ -117,10 +110,10 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         );
     }
 
-    protected function copyLocalTmpSnapshotsToContainer($tmp_path) {
+    protected function copySnapshotsToContainer($tmp_path, $env) {
         $this->dockworkerIO->title('Copying snapshot to container');
         [$container, $cmd] = $this->executeContainerCommand(
-            'local',
+            $env,
             ['mkdir', '-p', '/tmp/snapshot'],
             $this->dockworkerIO,
             '',
