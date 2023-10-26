@@ -66,6 +66,14 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         $this->initContainerExecCommand($this->dockworkerIO, $options['target-env']);
         $this->renderAllSnapshotFiles($options['source-env']);
 
+        $tmp_path = self::createTemporaryLocalStorage();
+        $this->validateDiskSpaceOnDevices(
+            $tmp_path,
+            $this->getDeployedContainer(
+                $this->dockworkerIO,
+                $options['target-env']
+            )
+        );
 
         $this->dockworkerIO->warning(
             sprintf(
@@ -83,13 +91,36 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
                 )
             )
         ) {
-            $tmp_path = self::createTemporaryLocalStorage();
             $this->copySnapshotsToLocalTmp($tmp_path);
-            $container = $this->copySnapshotsToContainer(
+            $container = $this->moveSnapshotsToContainer(
                 $tmp_path,
                 $options['target-env']
             );
             $this->executeImportScript($container);
+        }
+    }
+
+    /**
+     * Validates that there is enough disk space to install the snapshot.
+     *
+     * @param string $local_tmp_path
+     *  The path to the local dir the snapshot will be copied to.
+     */
+    protected function validateDiskSpaceOnDevices($local_tmp_path)
+    {
+        $total_bytes_needed = 0;
+        foreach ($this->snapshotFiles as $snapshot_file) {
+            $total_bytes_needed += $snapshot_file[1];
+        }
+        $estimate_bytes_needed = $total_bytes_needed * 4;
+        if (disk_free_space($local_tmp_path) < $estimate_bytes_needed) {
+            $this->dockworkerIO->error(
+                sprintf(
+                    'There is likely not enough free space on the local disk to stage the snapshot. You need an estimate of %s bytes free.',
+                    $estimate_bytes_needed
+                )
+            );
+            exit(1);
         }
     }
 
@@ -160,7 +191,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     }
 
     /**
-     * Copies the snapshot files to the container.
+     * 'Moves' the snapshot files to the container.
      *
      * @param string $snapshot_path
      *   The path to the snapshot dir.
@@ -170,7 +201,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
      * @return DockerContainer|null
      *   The container object, or null if none are available.
      */
-    protected function copySnapshotsToContainer(
+    protected function moveSnapshotsToContainer(
         string $snapshot_path,
         string $env
     ): DockerContainer|null {
@@ -191,6 +222,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
                 $snapshot_path . '/' . $snapshot_file[0],
                 '/tmp/snapshot/'
             );
+            unlink($snapshot_path . '/' . $snapshot_file[0]);
         }
         return $container;
     }
