@@ -2,9 +2,12 @@
 
 namespace Dockworker\Robo\Plugin\Commands;
 
+use Dockworker\Docker\DockerContainerExecTrait;
 use Dockworker\DockworkerDaemonCommands;
+use Dockworker\IO\DockworkerIO;
 use Dockworker\Snapshot\SnapshotTrait;
 use Dockworker\Storage\ApplicationLocalDataStorageTrait;
+use Dockworker\Storage\TemporaryStorageTrait;
 
 /**
  * Provides commands for interacting with snapshots of the application's data.
@@ -13,9 +16,8 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
 {
     use ApplicationLocalDataStorageTrait;
     use SnapshotTrait;
-
-    protected $snapshotHost;
-    protected $snapshotPath;
+    use TemporaryStorageTrait;
+    use DockerContainerExecTrait;
 
     /**
      * Shows the current snapshots for this application.
@@ -38,7 +40,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         $this->executeCliCommand(
             [
                 $this->cliTools['rsync'],
-                $this->snapshotHost . ':' . $this->snapshotPath . '/' . $options['env'] . '/',
+                $this->snapshotEnvPath . '/',
             ],
             $this->dockworkerIO,
             null,
@@ -50,72 +52,112 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     }
 
     /**
-     * Initializes the required bootstrap for a snapshot command.
+     * Installs a snapshot into a running instance.
      *
-     * @param string $env
-     * @return void
+     * @param mixed[] $options
+     *   The options passed to the command.
+     *
+     * @option string $env
+     *   The environment to show the snapshots for.
+     *
+     * @command snapshot:install
+     * @usage --env=local
      */
-    protected function initSnapshotCommand(string $env): void
-    {
-        $this->initRsyncCommand($this->dockworkerIO, $env);
-        $this->initSnapshotConfig();
-        $this->registerPreflightSnapshotConnectionTest();
-        $this->checkPreflightChecks($this->dockworkerIO);
+    public function installSnapshot(
+        array $options = [
+            'env' => 'local',
+            'source-env' => 'prod',
+        ]
+    ): void {
+        if ($options['env'] == 'local') {
+            $this->initSnapshotCommand($options['source-env']);
+            $this->initContainerExecCommand($this->dockworkerIO, $options['env']);
+
+            if (empty($this->snapshotFiles)) {
+                $this->dockworkerIO->error(
+                    sprintf(
+                        'There are no snapshots available for %s.',
+                        $options['source-env']
+                    )
+                );
+                exit(1);
+            }
+
+            $this->displaySnapshotFiles($options['source-env'], $this->dockworkerIO);
+            if ($this->dockworkerIO->confirm(
+                sprintf(
+                    'Are you sure you want to install the %s snapshot into %s?',
+                    $options['source-env'],
+                    $options['env']
+                )
+            ))
+            {
+                $tmp_path = self::createTemporaryStorage();
+                $this->copySnapshotsToLocalTmp($tmp_path);
+                $container = $this->copyLocalTmpSnapshotsToContainer($tmp_path);
+                $this->executeImportScript($container);
+            }
+        } else {
+            $this->dockworkerIO->error(
+                sprintf(
+                    'The only destination supported current is local. You specified %s.',
+                    $options['source-env']
+                )
+            );
+            exit(1);
+        }
     }
 
-    /**
-     * Initializes the configuration required for snapshot commands.
-     *
-     * @return void
-     */
-    protected function initSnapshotConfig(): void
-    {
-        $this->snapshotHost = $this->getSetApplicationLocalDataConfigurationItem(
-            'snapshot',
-            'host',
-            'Snapshot Hostname',
-            'retribution.hil.unb.ca',
-            'Enter the hostname to retrieve the snapshots from. This is the hostname of the server that the snapshots are stored on. Before adding this value, it is important that you can currently SSH into this server without a password.',
-            [],
-            'SNAPSHOT_SERVER_HOSTNAME'
-        );
-        $this->snapshotPath = $this->getSetApplicationLocalDataConfigurationItem(
-            'snapshot',
-            'path',
-            'Snapshot Path on Host',
-            "/mnt/storage0/KubeNFS/$this->applicationSlug/snapshot",
-            'Enter the path on the snapshot host where the snapshots for this application are stored. This path should contain a sub-directory for each environment (dev, prod).',
-            [],
-            'SNAPSHOT_SERVER_PATH'
+    protected function executeImportScript($container) {
+        $this->dockworkerIO->title('Installing Snapshot in Container');
+        $cmd = $container->run(
+            ['/scripts/importData.sh', '/tmp/snapshot'],
+            $this->dockworkerIO,
+            TRUE
         );
     }
 
-    /**
-     * Registers a preflight check to ensure that the snapshot server is accessible.
-     *
-     * @return void
-     */
-    protected function registerPreflightSnapshotConnectionTest(): void
-    {
-        $this->registerNewPreflightCheck(
-            'Testing connection to snapshot server',
-            $this->getCliToolPreflightCheckCommand(
-                $this->cliTools['rsync'],
+    protected function copyLocalTmpSnapshotsToContainer($tmp_path) {
+        $this->dockworkerIO->title('Copying snapshot to container');
+        [$container, $cmd] = $this->executeContainerCommand(
+            'local',
+            ['mkdir', '-p', '/tmp/snapshot'],
+            $this->dockworkerIO,
+            '',
+            '',
+            false,
+            false
+        );
+        foreach ($this->snapshotFiles as $snapshot_file)
+        {
+            $container->copyTo(
+                $this->dockworkerIO,
+                $tmp_path . '/' . $snapshot_file[0],
+                '/tmp/snapshot/'
+            );
+        }
+        return $container;
+    }
+
+    protected function copySnapshotsToLocalTmp($tmp_path) {
+        $this->dockworkerIO->title('Copying snapshot to local disk');
+        foreach ($this->snapshotFiles as $snapshot_file)
+        {
+            $full_snapshot_path = $this->snapshotEnvPath . '/' . $snapshot_file[0];
+            $this->executeCliCommand(
                 [
-                    $this->snapshotHost . ':/',
+                    $this->cliTools['rsync'],
+                    '-ah',
+                    $full_snapshot_path,
+                    $tmp_path,
                 ],
-                'rsync',
-                5.0
-            ),
-            'mustRun',
-            [],
-            'getOutput',
-            [],
-            'etc',
-            sprintf(
-                'Could not establish a connection to the snapshot server. Are you on the VPN? Please ensure that you can SSH into the server without a user or password specified in the ssh command (i.e. \'ssh %s\').',
-                $this->snapshotHost
-            )
-        );
+                $this->dockworkerIO,
+                null,
+                '',
+                'Copy From Server: ' . $full_snapshot_path,
+                true,
+                null
+            );
+        }
     }
 }
