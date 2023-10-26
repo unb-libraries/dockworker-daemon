@@ -6,6 +6,8 @@ use Dockworker\Cli\RSyncCliTrait;
 use Dockworker\IO\DockworkerIO;
 use Dockworker\Core\PreFlightCheckTrait;
 use Dockworker\Storage\DockworkerPersistentDataStorageTrait;
+use Dockworker\System\FileSystemOperationsTrait;
+use Drupal\Component\FileSystem\FileSystem;
 use Exception;
 use Github\AuthMethod;
 use Github\Client as GitHubClient;
@@ -15,6 +17,7 @@ use Github\Client as GitHubClient;
  */
 trait SnapshotTrait
 {
+    use FileSystemOperationsTrait;
     use RSyncCliTrait;
 
     protected $snapshotHost;
@@ -124,7 +127,7 @@ trait SnapshotTrait
                 )
             )
         );
-        foreach($raw_snapshot_list as $snapshot_file) {
+        foreach ($raw_snapshot_list as $snapshot_file) {
             $this->snapshotFiles[] = explode(' ', $snapshot_file);
         }
     }
@@ -141,10 +144,15 @@ trait SnapshotTrait
         string $env,
         DockworkerIO $io
     ): void {
+        $formatted_files = $this->snapshotFiles;
+        array_walk(
+            $formatted_files,
+            [$this, 'formatSize']
+        );
         $io->title("[$env] Snapshot Files");
         $io->table(
             ['File', 'Size', 'Date', 'Time (UTC)'],
-            $this->snapshotFiles
+            $formatted_files
         );
     }
 
@@ -173,6 +181,11 @@ trait SnapshotTrait
                 $this->snapshotHost
             )
         );
+    }
+
+    private function formatSize(&$item, $key)
+    {
+        $item[1] = self::bytesToHumanString(($item[1]));
     }
 
 }

@@ -106,7 +106,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
      * @param string $local_tmp_path
      *  The path to the local dir the snapshot will be copied to.
      */
-    protected function validateDiskSpaceOnDevices($local_tmp_path)
+    protected function validateDiskSpaceOnDevices($local_tmp_path): void
     {
         $total_bytes_needed = 0;
         foreach ($this->snapshotFiles as $snapshot_file) {
@@ -116,8 +116,9 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         if (disk_free_space($local_tmp_path) < $estimate_bytes_needed) {
             $this->dockworkerIO->error(
                 sprintf(
-                    'There is likely not enough free space on the local disk to stage the snapshot. You need an estimate of %s bytes free.',
-                    $estimate_bytes_needed
+                    'There is likely not enough free space in %s to stage the snapshot. You need an (minimum estimate of) %s free.',
+                    sys_get_temp_dir(),
+                    self::bytesToHumanString($estimate_bytes_needed)
                 )
             );
             exit(1);
