@@ -72,7 +72,8 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             $this->getDeployedContainer(
                 $this->dockworkerIO,
                 $options['target-env']
-            )
+            ),
+            $options['target-env']
         );
 
         $this->dockworkerIO->warning(
@@ -103,26 +104,109 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     /**
      * Validates that there is enough disk space to install the snapshot.
      *
+     * There is an assumption made here that the /tmp folder on the staging
+     * filesystem is the same as the /tmp folder in a 'local' container. This is
+     * generally true, but may not be in all cases. I don't care to follow this
+     * rabbit hole any further.
+     *
      * @param string $local_tmp_path
      *  The path to the local dir the snapshot will be copied to.
      */
-    protected function validateDiskSpaceOnDevices($local_tmp_path): void
-    {
-        $total_bytes_needed = 0;
-        foreach ($this->snapshotFiles as $snapshot_file) {
-            $total_bytes_needed += $snapshot_file[1];
+    protected function validateDiskSpaceOnDevices(
+        string $local_tmp_path,
+        DockerContainer $container,
+        string $target_env
+    ): void {
+        [$staging_bytes_needed, $inflate_bytes_needed] = $this->estimateNeededSpaceForSnapshotInstall();
+
+        if ($target_env === 'local') {
+            $this->validateLocalStagingDiskSpace(
+                $local_tmp_path,
+                $staging_bytes_needed * 2 + $inflate_bytes_needed
+            );
+        } else {
+            $this->validateLocalStagingDiskSpace(
+                $local_tmp_path,
+                $staging_bytes_needed
+            );
+            $this->validateContainerDiskSpace(
+                $container,
+                $staging_bytes_needed + $inflate_bytes_needed
+            );
         }
-        $estimate_bytes_needed = $total_bytes_needed * 4;
-        if (disk_free_space($local_tmp_path) < $estimate_bytes_needed) {
+    }
+
+    protected function validateContainerDiskSpace(
+        DockerContainer $container,
+        int $bytes_needed
+    ): void {
+        $command = $container->run(
+            ['/scripts/diskFree.sh'],
+            null,
+            false,
+        );
+        $free_container_space = $command->getOutput();
+        if ($free_container_space < $bytes_needed) {
             $this->dockworkerIO->error(
                 sprintf(
-                    'There is likely not enough free space in %s to stage the snapshot. You need an (minimum estimate of) %s free.',
-                    sys_get_temp_dir(),
-                    self::bytesToHumanString($estimate_bytes_needed)
+                    'There is likely not enough free space in the container to inflate the snapshot. You need an (estimate of) %s free.',
+                    self::bytesToHumanString($bytes_needed)
                 )
             );
             exit(1);
         }
+    }
+
+    /**
+     * Validates that there is enough disk space to stage the snapshot.
+     *
+     * @param string $local_tmp_path
+     *  The path to the local dir the snapshot will be copied to.
+     * @param int $bytes_needed
+     *  The number of bytes needed to stage the snapshot.
+     */
+    protected function validateLocalStagingDiskSpace(
+        string $local_tmp_path,
+        int $bytes_needed
+    ): void {
+        if (disk_free_space($local_tmp_path) < $bytes_needed) {
+            $this->dockworkerIO->error(
+                sprintf(
+                    'There is likely not enough free local space in %s to stage the snapshot. You need an (estimate of) %s free.',
+                    sys_get_temp_dir(),
+                    self::bytesToHumanString($bytes_needed)
+                )
+            );
+            exit(1);
+        }
+    }
+
+    /**
+     * Estimates the amount of space needed to install the snapshot.
+     *
+     * @return int[]
+     *   An array of the staging bytes needed and the inflated bytes needed.
+     */
+    protected function estimateNeededSpaceForSnapshotInstall(): array
+    {
+        $compression_percentages = [
+            'files.tar.gz' => 40,
+            'db.sql.gz' => 80,
+        ];
+
+        $staging_bytes_needed = 0;
+        $inflate_bytes_needed = 0;
+        foreach ($this->snapshotFiles as $snapshot_file) {
+            if (isset($compression_percentages[$snapshot_file[0]])) {
+                $inflate_ratio = 1 / (100 - $compression_percentages[$snapshot_file[0]] / 100);
+                $inflate_bytes_needed += $snapshot_file[1] * $inflate_ratio;
+            } else {
+                $inflate_bytes_needed += $snapshot_file[1] * 2;
+            }
+            $staging_bytes_needed += $snapshot_file[1];
+        }
+
+        return [(int) $staging_bytes_needed, (int) $inflate_bytes_needed];
     }
 
     /**
@@ -148,7 +232,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     /**
      * Validates the command option for unreasonable requests.
      *
-     * @param array $options
+     * @param mixed $options
      *   The command options.
      */
     protected function validateCommandOptions(array $options): void
@@ -179,15 +263,15 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     /**
      * Executes the generalized import script in the container.
      *
-     * @param [type] $container
+     * @param DockerContainer $container
      */
-    protected function executeImportScript($container): void
+    protected function executeImportScript(DockerContainer $container): void
     {
         $this->dockworkerIO->title('Installing Snapshot in Container');
         $container->run(
             ['/scripts/importData.sh', '/tmp/snapshot'],
             $this->dockworkerIO,
-            TRUE
+            true
         );
     }
 
@@ -216,8 +300,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             false,
             false
         );
-        foreach ($this->snapshotFiles as $snapshot_file)
-        {
+        foreach ($this->snapshotFiles as $snapshot_file) {
             $container->copyTo(
                 $this->dockworkerIO,
                 $snapshot_path . '/' . $snapshot_file[0],
@@ -237,8 +320,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     protected function copySnapshotsToLocalTmp(string $tmp_path): void
     {
         $this->dockworkerIO->title('Copying snapshot to local disk');
-        foreach ($this->snapshotFiles as $snapshot_file)
-        {
+        foreach ($this->snapshotFiles as $snapshot_file) {
             $full_snapshot_path = $this->snapshotEnvPath . '/' . $snapshot_file[0];
             $this->executeCliCommand(
                 [
