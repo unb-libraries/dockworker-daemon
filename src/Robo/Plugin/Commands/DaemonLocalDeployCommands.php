@@ -41,7 +41,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     }
 
     /**
-     * Deploys this application locally.
+     * Deploys this application locally, removing all existing data if it is currently running.
      *
      * @command application:deploy
      * @aliases deploy redeploy start-over
@@ -52,6 +52,32 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     {
         $this->dockworkerIO->title("Deploying $this->applicationName Locally");
         $this->stopRemoveComposeApplicationData();
+        $this->startUpLocalApplication();
+    }
+
+    /**
+     * Restarts the application locally, preserving persistent data.
+     *
+     * @command application:restart
+     * @aliases rebuild restart
+     *
+     * @throws \Dockworker\DockworkerException
+     */
+    public function restartApplication(): void
+    {
+        $this->dockworkerIO->title("Re-Deploying $this->applicationName Locally");
+        $this->dockworkerIO->say("Preserving data in database and filesystem");
+        $this->stopComposeApplication();
+        $this->startUpLocalApplication();
+    }
+
+    /**
+     * Starts the application locally.
+     *
+     * @return void
+     */
+    public function startUpLocalApplication(): void
+    {
         $this->setLocalHostFileEntries();
         $this->setRunOtherCommand(
             $this->dockworkerIO,
