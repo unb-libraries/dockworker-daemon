@@ -51,7 +51,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     public function deployApplication(): void
     {
         $this->dockworkerIO->title("Deploying $this->applicationName Locally");
-        $this->stopRemoveComposeApplicationData();
+        $this->stopRemoveComposeApplicationData(True);
         $this->startUpLocalApplication();
     }
 
@@ -67,7 +67,11 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     {
         $this->dockworkerIO->title("Re-Deploying $this->applicationName Locally");
         $this->dockworkerIO->say("Preserving data in database and filesystem");
-        $this->stopComposeApplication();
+        $handlers = $this->getCustomEventHandlers('dockworker-pre-local-restart-actions');
+        foreach ($handlers as $handler) {
+            $handler();
+        }
+        $this->stopRemoveComposeApplicationData(False);
         $this->startUpLocalApplication();
     }
 
