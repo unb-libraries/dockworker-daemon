@@ -97,7 +97,27 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
                 $tmp_path,
                 $options['target-env']
             );
+            // Remove the local tmp archive files.
+            $this->executeCliCommand(
+                ['rm', '-rf', "$tmp_path/*.gz"],
+                $this->dockworkerIO,
+                null,
+                '',
+                'Remove Local Archive Files',
+                false,
+                null
+            );
             $this->executeImportScript($container);
+            // Now, delete any remaining files in the container dir.
+            $this->executeContainerCommand(
+                $options['target-env'],
+                ['rm', '-rf', '/tmp/snapshot'],
+                $this->dockworkerIO,
+                '',
+                'Remove Container Archive Files',
+                false,
+                false
+            );
         }
     }
 
