@@ -78,7 +78,7 @@ trait SnapshotTrait
             'host',
             'Snapshot Hostname',
             'retribution.hil.unb.ca',
-            'Enter the hostname to retrieve the snapshots from. This is the hostname of the server that the snapshots are stored on. Before adding this value, it is important that you can currently SSH into this server without a password.',
+            'Enter the storage server hostname to retrieve the snapshots from. This is different from the application hostname. This is the hostname of the server that the snapshots are stored on. Before adding this value, it is important that you can currently SSH into this server without a password.',
             [],
             'SNAPSHOT_SERVER_HOSTNAME'
         );
