@@ -265,19 +265,18 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
                     $options['target-env']
                 )
             );
-            exit(0);
+            $this->dockworkerIO->warning(
+                'This is likely not what you want to do! You will roll back the data to the snapshot time.'
+            );
+            if (
+                !$this->dockworkerIO->confirm(
+                    'Are you sure you want to continue anyway?'
+                )
+            ) {
+                exit(0);
+            }
         }
 
-        if ($options['target-env'] === $options['source-env']) {
-            $this->dockworkerIO->warning(
-                sprintf(
-                    'The source [%s] and destination environments [%s] are the same.',
-                    $options['source-env'],
-                    $options['target-env']
-                )
-            );
-            exit(0);
-        }
     }
 
     /**
