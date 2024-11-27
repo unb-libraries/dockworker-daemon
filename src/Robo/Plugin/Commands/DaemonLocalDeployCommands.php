@@ -44,7 +44,7 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
      * Deploys this application locally, removing all existing data if it is currently running.
      *
      * @command application:deploy
-     * @aliases deploy redeploy start-over
+     * @aliases deploy redeploy start-over leviosa
      *
      * @throws \Dockworker\DockworkerException
      */
