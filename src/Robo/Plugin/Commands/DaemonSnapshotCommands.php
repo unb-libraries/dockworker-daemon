@@ -270,7 +270,8 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             );
             if (
                 !$this->dockworkerIO->confirm(
-                    'Are you sure you want to continue anyway?'
+                    'Are you sure you want to continue anyway?',
+                    false
                 )
             ) {
                 exit(0);
