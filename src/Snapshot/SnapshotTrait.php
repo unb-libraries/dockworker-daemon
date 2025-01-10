@@ -105,7 +105,7 @@ trait SnapshotTrait
             [
                 $this->cliTools['rsync'],
                 '-ah',
-                '--out-format="%n %l %t"',
+                '--out-format="%n %l %M"',
                 '--dry-run',
                 $this->snapshotEnvPath . '/*',
                 '.'
@@ -128,8 +128,15 @@ trait SnapshotTrait
             )
         );
         foreach ($raw_snapshot_list as $snapshot_file) {
-            $this->snapshotFiles[] = explode(' ', $snapshot_file);
+            $item = explode(' ', $snapshot_file);
+
+            // Column 2 contains date-time, so we need to split it into two columns.
+            $values = explode('-', $item[2]);
+            $item[2] = $values[0];
+            $item[3] = $values[1];
+            $this->snapshotFiles[] = $item;
         }
+
     }
 
     /**
