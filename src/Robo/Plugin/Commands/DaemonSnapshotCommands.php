@@ -51,6 +51,8 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
      *   The environment to install the snapshot from.
      * @option string $target-env
      *   The environment to install the snapshot in.
+     * @option bool $no-files
+     *   Do not install any files.
      *
      * @command snapshot:install
      * @usage --source-env=prod --target-env=
@@ -59,10 +61,18 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         array $options = [
             'source-env' => 'prod',
             'target-env' => 'local',
+            'no-files' => false,
         ]
     ): void {
         $this->validateCommandOptions($options);
-        $this->initSnapshotCommand($options['source-env']);
+        $files_to_skip = [];
+        if ($options['no-files']) {
+            $this->dockworkerIO->say(
+                'Skipping file installation as requested.'
+            );
+            $files_to_skip = ['files.tar.gz'];
+        }
+        $this->initSnapshotCommand($options['source-env'], $files_to_skip);
         $this->initContainerExecCommand($this->dockworkerIO, $options['target-env']);
         $this->renderAllSnapshotFiles($options['source-env']);
 

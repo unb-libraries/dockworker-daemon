@@ -45,15 +45,18 @@ trait SnapshotTrait
      * Initializes the required bootstrap for a snapshot command.
      *
      * @param string $env
+     *   The environment to initialize the command for.
+     * @param array $exclude_files
+     *   An array of files to exclude from operations.
      * @return void
      */
-    protected function initSnapshotCommand(string $env): void
+    protected function initSnapshotCommand(string $env, array $exclude_files = []): void
     {
         $this->initRsyncCommand($this->dockworkerIO, $env);
         $this->initSnapshotConfig();
         $this->registerPreflightSnapshotConnectionTest();
         $this->snapshotEnvPath = $this->snapshotHost . ':' . $this->snapshotPath . '/' . $env;
-        $this->setSnapshotFiles($env);
+        $this->setSnapshotFiles($env, $exclude_files);
     }
 
     /**
@@ -97,9 +100,11 @@ trait SnapshotTrait
      * Sets the snapshot files from the storage server.
      *
      * @param string $env
-     *  The environment to retrieve the snapshot files for.
+     *   The environment to retrieve the snapshot files for.
+     * @param array $exclude_files
+     *   An array of files to exclude from operations.
      */
-    protected function setSnapshotFiles(string $env): void
+    protected function setSnapshotFiles(string $env, array $exclude_files = []): void
     {
         $snapshot_output = $this->executeCliCommand(
             [
@@ -134,7 +139,9 @@ trait SnapshotTrait
             $values = explode('-', $item[2]);
             $item[2] = $values[0];
             $item[3] = $values[1];
-            $this->snapshotFiles[] = $item;
+            if (!in_array($item[0], $exclude_files)) {
+                $this->snapshotFiles[] = $item;
+            }
         }
 
     }
