@@ -128,6 +128,10 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
                 false,
                 false
             );
+        } else {
+            $this->dockworkerIO->say('Snapshot installation aborted.');
+            // Do not fire hooks.
+            exit(0);
         }
     }
 
