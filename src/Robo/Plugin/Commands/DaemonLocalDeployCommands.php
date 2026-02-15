@@ -56,6 +56,19 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     }
 
     /**
+     * Stops and removes the application locally
+     *
+     * @command application:rm
+     *
+     * @throws \Dockworker\DockworkerException
+     */
+    public function removeApplication(): void
+    {
+        $this->dockworkerIO->title("Removing $this->applicationName Local Data");
+        $this->stopRemoveComposeApplicationData(False);
+    }
+
+    /**
      * Restarts the application locally, preserving persistent data.
      *
      * @command application:restart
