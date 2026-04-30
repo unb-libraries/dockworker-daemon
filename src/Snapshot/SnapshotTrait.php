@@ -80,7 +80,7 @@ trait SnapshotTrait
             'snapshot',
             'host',
             'Snapshot Hostname',
-            'retribution.hil.unb.ca',
+            'vengeance.hil.unb.ca',
             'Enter the storage server hostname to retrieve the snapshots from. This is different from the application hostname, and is the server that the snapshots are stored on. Before adding this value, it is important that you can currently SSH into this server without a password.',
             [],
             'SNAPSHOT_SERVER_HOSTNAME'
@@ -89,7 +89,7 @@ trait SnapshotTrait
             'snapshot',
             'path',
             'Snapshot Path on Host',
-            "/mnt/storage0/KubeNFS/$this->applicationSlug/snapshot",
+            "/mnt/storage0/KubeNFSv2/$this->applicationName/snapshot",
             'Enter the path on the snapshot host where the snapshots for this application are stored. This path should contain a sub-directory for each environment (dev, prod).',
             [],
             'SNAPSHOT_SERVER_PATH'
