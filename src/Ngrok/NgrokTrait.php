@@ -63,7 +63,6 @@ trait NgrokTrait
             'Auth Token',
             '',
             'Enter your ngrok personal auth token.',
-            // @phpstan-ignore-next-line Nested arrays; vendored string[] type is wrong.
             [
                 [
                     'label' => 'HOWTO',

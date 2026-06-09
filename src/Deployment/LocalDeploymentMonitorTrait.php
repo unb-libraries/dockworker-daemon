@@ -45,7 +45,6 @@ trait LocalDeploymentMonitorTrait
             $lines = explode("\n", $line_buffer);
             $line_buffer = array_pop($lines);
             if (!empty($lines)) {
-                // @phpstan-ignore-next-line Provided by LogCheckerTrait; pending vendored package update.
                 ['scan' => $scan, 'warnings' => $new_warnings] = $this->partitionLogLines($lines, $partition_state);
                 $warnings = array_merge($warnings, $new_warnings);
                 if (
@@ -81,13 +80,11 @@ trait LocalDeploymentMonitorTrait
         if ($error_found) {
             $cmd->signal(9);
             $this->reportErrorsInLogs($this->dockworkerIO, $matched_errors);
-            // @phpstan-ignore-next-line Provided by LogCheckerTrait; pending vendored package update.
             $this->reportWarningsInLogs($this->dockworkerIO, $warnings);
             $this->dockworkerIO->error('Application deploy failed.');
             exit(1);
         }
         $cmd->stop(1);
-        // @phpstan-ignore-next-line Provided by LogCheckerTrait; pending vendored package update.
         $this->reportWarningsInLogs($this->dockworkerIO, $warnings);
         $this->say('Container startup complete.');
         $this->dockworkerIO->newLine();
