@@ -29,35 +29,60 @@ trait LocalDeploymentMonitorTrait
         $cmd = $this->startLocalDeploymentLogFollowingCommand($timeout);
         [$errors_pattern, $exceptions_pattern] = $this->getAllLogErrorStrings();
         $error_found = false;
-        $incremental_output = '';
+        $finished = false;
+        $line_buffer = '';
+        $warnings = [];
         $matched_errors = [];
-        while (
-            !str_contains(
-                $incremental_output,
-                $this->deploymentFinishedMarker
-            )
-        ) {
-            $incremental_output = $cmd->getIncrementalOutput();
-            if (
-                $this->logsHaveErrors(
-                    $incremental_output,
-                    $errors_pattern,
-                    $exceptions_pattern,
-                    $matched_errors
-                )
-            ) {
-                $error_found = true;
-                break;
+        $partition_state = [];
+        while (!$finished) {
+            $line_buffer .= $cmd->getIncrementalOutput();
+            // Process only complete lines; retain any trailing partial line for
+            // the next iteration so a marker/error split across a chunk boundary
+            // is classified against its whole line.
+            $lines = explode("\n", $line_buffer);
+            $line_buffer = array_pop($lines);
+            if (!empty($lines)) {
+                ['scan' => $scan, 'warnings' => $new_warnings] = $this->partitionLogLines($lines, $partition_state);
+                $warnings = array_merge($warnings, $new_warnings);
+                if (
+                    $scan !== ''
+                    && $this->logsHaveErrors(
+                        $scan,
+                        $errors_pattern,
+                        $exceptions_pattern,
+                        $matched_errors
+                    )
+                ) {
+                    $error_found = true;
+                    break;
+                }
+                foreach ($lines as $line) {
+                    if (str_contains($line, $this->deploymentFinishedMarker)) {
+                        $finished = true;
+                    }
+                }
             }
-            usleep(500);
+            // Honor the marker even if it lands on the trailing partial line
+            // (no newline yet) so completion can never hang.
+            if (
+                !$finished
+                && str_contains($line_buffer, $this->deploymentFinishedMarker)
+            ) {
+                $finished = true;
+            }
+            if (!$finished) {
+                usleep(500);
+            }
         }
         if ($error_found) {
             $cmd->signal(9);
             $this->reportErrorsInLogs($this->dockworkerIO, $matched_errors);
+            $this->reportWarningsInLogs($this->dockworkerIO, $warnings);
             $this->dockworkerIO->error('Application deploy failed.');
             exit(1);
         }
         $cmd->stop(1);
+        $this->reportWarningsInLogs($this->dockworkerIO, $warnings);
         $this->say('Container startup complete.');
         $this->dockworkerIO->newLine();
     }
