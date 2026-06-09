@@ -137,7 +137,7 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     /**
      * Validates the command option for unreasonable requests.
      *
-     * @param mixed $options
+     * @param array<string, mixed> $options
      *   The command options.
      */
     protected function validateCommandOptions(array $options): void
