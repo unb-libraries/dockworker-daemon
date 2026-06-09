@@ -23,7 +23,7 @@ trait DockerContainerExecTrait
      *
      * @param string $env
      *   The environment to execute the command in.
-     * @param array $command
+     * @param string[] $command
      *   The command to execute.
      * @param \Dockworker\IO\DockworkerIO $io
      *   The IO to use for input and output.
@@ -36,7 +36,7 @@ trait DockerContainerExecTrait
      * @param bool $use_tty
      *   TRUE to attach to a TTY for the command.
      *
-     * @return array
+     * @return array{0: \Dockworker\Docker\DockerContainer, 1: \Dockworker\Cli\CliCommand}
      *   An array containing the container and the command result.
      */
     protected function executeContainerCommand(
@@ -78,7 +78,7 @@ trait DockerContainerExecTrait
      *
      * @param string $env
      *   The environment to execute the command in.
-     * @param array $commands
+     * @param array<int, array{command: string[], message?: string, use_tty?: bool}> $commands
      *   The commands to execute.
      * @param \Dockworker\IO\DockworkerIO $io
      *   The IO to use for input and output.
