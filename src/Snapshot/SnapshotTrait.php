@@ -172,6 +172,26 @@ trait SnapshotTrait
     }
 
     /**
+     * Displays all snapshot files for the given environment, erroring if none.
+     *
+     * @param string $env
+     *   The environment to display the snapshots for.
+     */
+    protected function renderAllSnapshotFiles($env): void
+    {
+        if (empty($this->snapshotFiles)) {
+            $this->dockworkerIO->error(
+                sprintf(
+                    'There are no snapshots available for %s.',
+                    $env
+                )
+            );
+            exit(1);
+        }
+        $this->displaySnapshotFiles($env, $this->dockworkerIO);
+    }
+
+    /**
      * Registers a preflight check to ensure that the snapshot server is accessible.
      */
     protected function registerPreflightSnapshotConnectionTest(): void

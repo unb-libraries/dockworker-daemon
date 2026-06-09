@@ -135,26 +135,6 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
     }
 
     /**
-     * Displays all snapshot files for the given environment.
-     *
-     * @param string $env
-     *   The environment to display the snapshots for.
-     */
-    protected function renderAllSnapshotFiles($env): void
-    {
-        if (empty($this->snapshotFiles)) {
-            $this->dockworkerIO->error(
-                sprintf(
-                    'There are no snapshots available for %s.',
-                    $env
-                )
-            );
-            exit(1);
-        }
-        $this->displaySnapshotFiles($env, $this->dockworkerIO);
-    }
-
-    /**
      * Validates the command option for unreasonable requests.
      *
      * @param mixed $options
