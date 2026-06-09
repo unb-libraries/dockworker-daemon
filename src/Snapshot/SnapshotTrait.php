@@ -21,11 +21,16 @@ trait SnapshotTrait
     use FileSystemOperationsTrait;
     use RSyncCliTrait;
 
-    protected $snapshotHost;
-    protected $snapshotPath;
-    protected $snapshotEnvPath;
-    protected $snapshotFiles = [];
-    protected $totalSnapshotSize = 0;
+    protected string $snapshotHost;
+    protected string $snapshotPath;
+    protected string $snapshotEnvPath;
+
+    /**
+     * @var array<int, string[]>
+     */
+    protected array $snapshotFiles = [];
+
+    protected int $totalSnapshotSize = 0;
 
     /**
      * Initializes the command and executes all preflight checks.
@@ -47,7 +52,7 @@ trait SnapshotTrait
      *
      * @param string $env
      *   The environment to initialize the command for.
-     * @param array $exclude_files
+     * @param string[] $exclude_files
      *   An array of files to exclude from operations.
      * @return void
      */
@@ -66,7 +71,7 @@ trait SnapshotTrait
     protected function setSnapshotFileSize(): void
     {
         foreach ($this->snapshotFiles as $snapshot_file) {
-            $this->totalSnapshotSize += $snapshot_file[1];
+            $this->totalSnapshotSize += (int) $snapshot_file[1];
         }
     }
 
@@ -102,7 +107,7 @@ trait SnapshotTrait
      *
      * @param string $env
      *   The environment to retrieve the snapshot files for.
-     * @param array $exclude_files
+     * @param string[] $exclude_files
      *   An array of files to exclude from operations.
      */
     protected function setSnapshotFiles(string $env, array $exclude_files = []): void
@@ -400,19 +405,28 @@ trait SnapshotTrait
         $staging_bytes_needed = 0;
         $inflate_bytes_needed = 0;
         foreach ($this->snapshotFiles as $snapshot_file) {
+            $snapshot_file_size = (int) $snapshot_file[1];
             if (isset($compression_percentages[$snapshot_file[0]])) {
                 $inflate_ratio = 1 / (100 - $compression_percentages[$snapshot_file[0]] / 100);
-                $inflate_bytes_needed += $snapshot_file[1] * $inflate_ratio;
+                $inflate_bytes_needed += $snapshot_file_size * $inflate_ratio;
             } else {
-                $inflate_bytes_needed += $snapshot_file[1] * 2;
+                $inflate_bytes_needed += $snapshot_file_size * 2;
             }
-            $staging_bytes_needed += $snapshot_file[1];
+            $staging_bytes_needed += $snapshot_file_size;
         }
 
         return [(int) $staging_bytes_needed, (int) $inflate_bytes_needed];
     }
 
-    private function formatSize(&$item, $key)
+    /**
+     * Formats the size column of a snapshot file row to a human string.
+     *
+     * @param string[] $item
+     *   The snapshot file row, modified in place.
+     * @param int $key
+     *   The array key of the row.
+     */
+    private function formatSize(array &$item, int $key): void
     {
         $item[1] = self::bytesToHumanString(($item[1]));
     }
