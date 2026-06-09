@@ -428,7 +428,7 @@ trait SnapshotTrait
      */
     private function formatSize(array &$item, int $key): void
     {
-        $item[1] = self::bytesToHumanString(($item[1]));
+        $item[1] = self::bytesToHumanString((int) $item[1]);
     }
 
 }
