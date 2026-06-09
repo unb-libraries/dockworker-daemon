@@ -18,7 +18,7 @@ trait NgrokTrait
     use NgrokCliTrait;
     use PreFlightCheckTrait;
 
-    protected $ngrokAuthToken;
+    protected string $ngrokAuthToken;
 
     /**
      * Initializes the command and executes all preflight checks.
@@ -63,6 +63,7 @@ trait NgrokTrait
             'Auth Token',
             '',
             'Enter your ngrok personal auth token.',
+            // @phpstan-ignore-next-line Nested arrays; vendored string[] type is wrong.
             [
                 [
                     'label' => 'HOWTO',
