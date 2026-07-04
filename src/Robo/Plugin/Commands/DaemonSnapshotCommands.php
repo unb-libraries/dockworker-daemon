@@ -64,14 +64,14 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
             $rows[] = [
                 $name,
                 (string) ($manifest['created'] ?? ''),
-                !empty($manifest['has_files']) ? 'yes' : 'no',
+                $this->summarizeSnapshotSize($manifest),
                 (string) ($manifest['created_by'] ?? ''),
                 (string) ($manifest['description'] ?? ''),
             ];
         }
         $this->dockworkerIO->title("[$env] Snapshots");
         $this->dockworkerIO->table(
-            ['Name', 'Created (UTC)', 'Files', 'Created By', 'Description'],
+            ['Name', 'Created (UTC)', 'Size', 'Created By', 'Description'],
             $rows
         );
     }

@@ -360,6 +360,58 @@ trait SnapshotTrait
     }
 
     /**
+     * Summarizes a snapshot's artifact sizes for display.
+     *
+     * Produces a compact, human-readable summary such as "82M DB, 4G Files"
+     * from the manifest's artifact list.
+     *
+     * @param array<string, mixed> $manifest
+     *   The decoded snapshot manifest.
+     *
+     * @return string
+     *   The size summary, or an empty string if no artifacts are recorded.
+     */
+    protected function summarizeSnapshotSize(array $manifest): string
+    {
+        $labels = [
+            'db.sql.gz' => 'DB',
+            'files.tar.gz' => 'Files',
+        ];
+        $parts = [];
+        foreach ($manifest['artifacts'] ?? [] as $artifact) {
+            if (!isset($artifact['file'], $artifact['bytes'])) {
+                continue;
+            }
+            $label = $labels[$artifact['file']] ?? $artifact['file'];
+            $parts[] = self::abbreviateBytes((int) $artifact['bytes']) . ' ' . $label;
+        }
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Formats a byte count as a compact human string (e.g. "82M", "4G").
+     *
+     * @param int $bytes
+     *   The number of bytes.
+     *
+     * @return string
+     *   A compact size string with a single-letter unit.
+     */
+    protected static function abbreviateBytes(int $bytes): string
+    {
+        $units = ['B', 'K', 'M', 'G', 'T', 'P'];
+        $bytes = max($bytes, 0);
+        $pow = $bytes > 0 ? (int) floor(log($bytes) / log(1024)) : 0;
+        $pow = min($pow, count($units) - 1);
+        $value = $bytes / (1024 ** $pow);
+        // Whole numbers for the byte unit or values >= 10; otherwise one decimal.
+        $formatted = ($pow === 0 || $value >= 10)
+            ? (string) round($value)
+            : (string) round($value, 1);
+        return $formatted . $units[$pow];
+    }
+
+    /**
      * Decodes a local manifest file, returning null if missing or invalid.
      *
      * @param string $path
