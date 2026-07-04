@@ -405,30 +405,33 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
      * Starts from the CronJob-derived spec so volumes, node placement, image
      * and env are preserved, then rewrites only the container invocation.
      *
-     * @param array<string, mixed> $job_spec
-     *   The CronJob-derived Job spec (.spec.jobTemplate.spec).
+     * @param object $job_spec
+     *   The CronJob-derived Job spec (.spec.jobTemplate.spec), decoded as an
+     *   object so empty JSON objects round-trip correctly.
      * @param string $name
      *   The snapshot name.
      * @param mixed[] $options
      *   The command options.
      *
-     * @return array<string, mixed>
+     * @return object
      *   The edited Job spec.
      */
-    protected function prepareSnapshotJobSpec(array $job_spec, string $name, array $options): array
+    protected function prepareSnapshotJobSpec(object $job_spec, string $name, array $options): object
     {
-        $containers = $job_spec['template']['spec']['containers'] ?? [];
+        $containers = $job_spec->template->spec->containers ?? [];
         if (empty($containers)) {
             $this->dockworkerIO->error('The snapshot CronJob has no containers to run.');
             exit(1);
         }
+        // $container is a shared object handle; editing it updates the spec.
+        $container = $containers[0];
 
         // The existing invocation carries the site's file policy (large sites
         // set --no-files). Inspect it to drive the confirmation, but the manual
         // default is to include files unless the user asks otherwise.
         $existing = array_merge(
-            $containers[0]['command'] ?? [],
-            $containers[0]['args'] ?? []
+            $container->command ?? [],
+            $container->args ?? []
         );
         $cronjob_skips_files = in_array('--no-files', $existing, true);
         $skip_files = (bool) $options['no-files'];
@@ -452,13 +455,12 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
         if (!empty($options['description'])) {
             $args[] = '--description=' . $options['description'];
         }
-        $containers[0]['command'] = [$entry];
-        $containers[0]['args'] = $args;
-        $job_spec['template']['spec']['containers'] = $containers;
+        $container->command = [$entry];
+        $container->args = $args;
 
         // Safe Job fields: never retry the heavy dump; self-clean after a day.
-        $job_spec['backoffLimit'] = 0;
-        $job_spec['ttlSecondsAfterFinished'] = 86400;
+        $job_spec->backoffLimit = 0;
+        $job_spec->ttlSecondsAfterFinished = 86400;
 
         return $job_spec;
     }

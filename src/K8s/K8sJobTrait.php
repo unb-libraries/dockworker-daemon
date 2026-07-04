@@ -114,17 +114,22 @@ trait K8sJobTrait
     }
 
     /**
-     * Retrieves a CronJob's jobTemplate spec as a decoded array.
+     * Retrieves a CronJob's jobTemplate spec as a decoded object.
+     *
+     * The spec is decoded as objects (not associative arrays) so that empty
+     * JSON objects such as "resources": {} round-trip back to {} on re-encode.
+     * Decoding associatively would turn them into [] and the Kubernetes API
+     * would reject the resulting Job.
      *
      * @param string $env
      *   The namespace of the CronJob.
      * @param string $name
      *   The name of the CronJob.
      *
-     * @return array<string, mixed>|null
+     * @return object|null
      *   The CronJob's .spec.jobTemplate.spec, or null if unavailable.
      */
-    protected function getCronJobJobSpec(string $env, string $name): ?array
+    protected function getCronJobJobSpec(string $env, string $name): ?object
     {
         $cmd = $this->kubeCtlRun(
             [
@@ -139,11 +144,11 @@ trait K8sJobTrait
             30.0,
             false
         );
-        $data = json_decode($cmd->getOutput(), true);
-        if (!is_array($data) || empty($data['spec']['jobTemplate']['spec'])) {
+        $data = json_decode($cmd->getOutput());
+        if (!is_object($data) || !isset($data->spec->jobTemplate->spec)) {
             return null;
         }
-        return $data['spec']['jobTemplate']['spec'];
+        return $data->spec->jobTemplate->spec;
     }
 
     /**
@@ -153,8 +158,9 @@ trait K8sJobTrait
      *   The namespace to create the Job in.
      * @param string $job_name
      *   The name of the Job.
-     * @param array<string, mixed> $job_spec
-     *   The Job's .spec (typically derived from a CronJob's jobTemplate.spec).
+     * @param object $job_spec
+     *   The Job's .spec (typically derived from a CronJob's jobTemplate.spec),
+     *   decoded as an object so empty JSON objects round-trip correctly.
      * @param array<string, string> $labels
      *   Labels to apply to the Job metadata.
      *
@@ -164,7 +170,7 @@ trait K8sJobTrait
     protected function createJobFromSpec(
         string $env,
         string $job_name,
-        array $job_spec,
+        object $job_spec,
         array $labels = []
     ): CliCommand {
         $manifest = [
@@ -173,7 +179,7 @@ trait K8sJobTrait
             'metadata' => [
                 'name' => $job_name,
                 'namespace' => $env,
-                'labels' => $labels,
+                'labels' => (object) $labels,
             ],
             'spec' => $job_spec,
         ];
