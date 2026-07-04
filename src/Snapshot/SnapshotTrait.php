@@ -250,13 +250,16 @@ trait SnapshotTrait
      */
     protected function listSnapshotNames(string $env): array
     {
+        // Use -d (non-recursive) so rsync lists only the immediate entries of
+        // the environment directory. With -a/-r it would descend into each
+        // snapshot and report its artifacts as if they were snapshots too.
         $snapshot_output = $this->executeCliCommand(
             [
                 $this->cliTools['rsync'],
-                '-ah',
+                '-dh',
                 '--out-format="%n"',
                 '--dry-run',
-                $this->snapshotEnvBasePath . '/*',
+                $this->snapshotEnvBasePath . '/',
                 '.',
             ],
             null,
@@ -274,10 +277,17 @@ trait SnapshotTrait
             )
         );
         foreach ($raw_list as $line) {
-            $name = trim(explode(' ', trim($line))[0], "/ \t");
-            if ($name !== '' && $name !== '.') {
-                $names[] = $name;
+            $line = trim($line);
+            // Snapshots are directories; rsync lists directories with a
+            // trailing slash. Ignore any loose files at the environment root.
+            if ($line === '' || substr($line, -1) !== '/') {
+                continue;
             }
+            $name = rtrim($line, '/');
+            if ($name === '' || $name === '.' || str_contains($name, '/')) {
+                continue;
+            }
+            $names[] = $name;
         }
         sort($names);
         return $names;
