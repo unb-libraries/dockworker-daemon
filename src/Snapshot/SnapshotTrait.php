@@ -7,6 +7,7 @@ use Dockworker\Docker\DockerContainer;
 use Dockworker\IO\DockworkerIO;
 use Dockworker\Core\PreFlightCheckTrait;
 use Dockworker\Storage\DockworkerPersistentDataStorageTrait;
+use Dockworker\Storage\TemporaryStorageTrait;
 use Dockworker\System\FileSystemOperationsTrait;
 use Drupal\Component\FileSystem\FileSystem;
 use Exception;
@@ -20,10 +21,25 @@ trait SnapshotTrait
 {
     use FileSystemOperationsTrait;
     use RSyncCliTrait;
+    use TemporaryStorageTrait;
 
     protected string $snapshotHost;
     protected string $snapshotPath;
+
+    /**
+     * The remote path to the environment's snapshot tree (host:path/env).
+     */
+    protected string $snapshotEnvBasePath;
+
+    /**
+     * The remote path to a specific named snapshot (host:path/env/name).
+     */
     protected string $snapshotEnvPath;
+
+    /**
+     * The name of the snapshot currently being operated on.
+     */
+    protected string $snapshotName;
 
     /**
      * @var array<int, string[]>
@@ -48,20 +64,58 @@ trait SnapshotTrait
     }
 
     /**
-     * Initializes the required bootstrap for a snapshot command.
+     * Initializes the connection to the snapshot server for an environment.
+     *
+     * Establishes the rsync tooling, snapshot configuration, preflight
+     * reachability check and the base path to the environment's snapshot tree.
+     * Callers that operate on a single named snapshot should use
+     * initSnapshotCommand(); listing operations use this directly.
      *
      * @param string $env
-     *   The environment to initialize the command for.
-     * @param string[] $exclude_files
-     *   An array of files to exclude from operations.
-     * @return void
+     *   The environment to initialize the connection for.
      */
-    protected function initSnapshotCommand(string $env, array $exclude_files = []): void
+    protected function initSnapshotConnection(string $env): void
     {
         $this->initRsyncCommand($this->dockworkerIO, $env);
         $this->initSnapshotConfig();
         $this->registerPreflightSnapshotConnectionTest();
-        $this->snapshotEnvPath = $this->snapshotHost . ':' . $this->snapshotPath . '/' . $env;
+        $this->snapshotEnvBasePath = $this->snapshotHost . ':' . $this->snapshotPath . '/' . $env;
+    }
+
+    /**
+     * Initializes the required bootstrap for a named snapshot command.
+     *
+     * @param string $env
+     *   The environment to initialize the command for.
+     * @param string $name
+     *   The name of the snapshot to operate on.
+     * @param string[] $exclude_files
+     *   An array of files to exclude from operations.
+     * @return void
+     */
+    protected function initSnapshotCommand(string $env, string $name, array $exclude_files = []): void
+    {
+        $this->initSnapshotConnection($env);
+        $this->selectSnapshot($env, $name, $exclude_files);
+    }
+
+    /**
+     * Selects a named snapshot within an already-connected environment.
+     *
+     * Sets the remote path to the named snapshot and enumerates its artifacts.
+     * Assumes initSnapshotConnection() has already been called for $env.
+     *
+     * @param string $env
+     *   The environment the snapshot belongs to.
+     * @param string $name
+     *   The name of the snapshot to select.
+     * @param string[] $exclude_files
+     *   An array of files to exclude from operations.
+     */
+    protected function selectSnapshot(string $env, string $name, array $exclude_files = []): void
+    {
+        $this->snapshotName = $name;
+        $this->snapshotEnvPath = $this->snapshotEnvBasePath . '/' . $name;
         $this->setSnapshotFiles($env, $exclude_files);
     }
 
@@ -112,6 +166,9 @@ trait SnapshotTrait
      */
     protected function setSnapshotFiles(string $env, array $exclude_files = []): void
     {
+        // The manifest describes the snapshot; it is never a transferable
+        // artifact, so it is always excluded from operations.
+        $exclude_files = array_merge(['snapshot.json'], $exclude_files);
         $snapshot_output = $this->executeCliCommand(
             [
                 $this->cliTools['rsync'],
@@ -153,6 +210,164 @@ trait SnapshotTrait
     }
 
     /**
+     * Validates that a snapshot name is a safe, single path segment.
+     *
+     * A snapshot name becomes a directory segment in the remote rsync path and
+     * a kubectl argument, so it must not permit path traversal or shell tricks.
+     *
+     * @param string $name
+     *   The snapshot name to validate.
+     */
+    protected function validateSnapshotName(string $name): void
+    {
+        if (
+            $name === '' ||
+            $name === '.' ||
+            $name === '..' ||
+            !preg_match('/^[A-Za-z0-9._-]+$/', $name)
+        ) {
+            $this->dockworkerIO->error(
+                sprintf(
+                    'Invalid snapshot name [%s]. Names may contain only letters, numbers, dots, dashes and underscores.',
+                    $name
+                )
+            );
+            exit(1);
+        }
+    }
+
+    /**
+     * Lists the names of the snapshots available for an environment.
+     *
+     * Enumerates the sub-directories of the environment's snapshot tree; each
+     * one is a named snapshot.
+     *
+     * @param string $env
+     *   The environment to list snapshot names for.
+     *
+     * @return string[]
+     *   The sorted snapshot names found for the environment.
+     */
+    protected function listSnapshotNames(string $env): array
+    {
+        $snapshot_output = $this->executeCliCommand(
+            [
+                $this->cliTools['rsync'],
+                '-ah',
+                '--out-format="%n"',
+                '--dry-run',
+                $this->snapshotEnvBasePath . '/*',
+                '.',
+            ],
+            null,
+            null,
+            '',
+            '',
+            false,
+            10.0
+        );
+        $names = [];
+        $raw_list = array_filter(
+            explode(
+                "\n",
+                str_replace('"', '', $snapshot_output->getOutput())
+            )
+        );
+        foreach ($raw_list as $line) {
+            $name = trim(explode(' ', trim($line))[0], "/ \t");
+            if ($name !== '' && $name !== '.') {
+                $names[] = $name;
+            }
+        }
+        sort($names);
+        return $names;
+    }
+
+    /**
+     * Fetches all snapshot manifests for an environment into a local temp tree.
+     *
+     * Pulls every <name>/snapshot.json in a single rsync, mirroring the remote
+     * directory structure locally, rather than one transfer per snapshot.
+     *
+     * @param string $env
+     *   The environment to fetch manifests for.
+     *
+     * @return string
+     *   The local temp directory containing <name>/snapshot.json for each
+     *   snapshot that has a manifest.
+     */
+    protected function fetchAllManifests(string $env): string
+    {
+        $tmp_path = self::createTemporaryLocalStorage('manifests');
+        $this->executeCliCommand(
+            [
+                $this->cliTools['rsync'],
+                '-ahr',
+                '--prune-empty-dirs',
+                '--include=*/',
+                '--include=snapshot.json',
+                '--exclude=*',
+                $this->snapshotEnvBasePath . '/',
+                $tmp_path . '/',
+            ],
+            null,
+            null,
+            '',
+            '',
+            false,
+            30.0
+        );
+        return $tmp_path;
+    }
+
+    /**
+     * Reads and decodes a single named snapshot's manifest.
+     *
+     * @param string $name
+     *   The snapshot name.
+     *
+     * @return array<string, mixed>|null
+     *   The decoded manifest, or null if none exists or it cannot be parsed.
+     */
+    protected function readManifest(string $name): ?array
+    {
+        $tmp_path = self::createTemporaryLocalStorage('manifest');
+        $this->executeCliCommand(
+            [
+                $this->cliTools['rsync'],
+                '-ah',
+                $this->snapshotEnvBasePath . '/' . $name . '/snapshot.json',
+                $tmp_path . '/',
+            ],
+            null,
+            null,
+            '',
+            '',
+            false,
+            10.0
+        );
+        return $this->decodeManifestFile($tmp_path . '/snapshot.json');
+    }
+
+    /**
+     * Decodes a local manifest file, returning null if missing or invalid.
+     *
+     * @param string $path
+     *   The local path to the manifest file.
+     *
+     * @return array<string, mixed>|null
+     *   The decoded manifest, or null.
+     */
+    protected function decodeManifestFile(string $path): ?array
+    {
+        if (!file_exists($path)) {
+            return null;
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        return is_array($data) ? $data : null;
+    }
+
+    /**
      * Displays the snapshot files for the specified environment.
      *
      * @param string $env
@@ -169,7 +384,7 @@ trait SnapshotTrait
             $formatted_files,
             [$this, 'formatSize']
         );
-        $io->title("[$env] Snapshot Files");
+        $io->title("[$env] Snapshot '$this->snapshotName' Files");
         $io->table(
             ['File', 'Size', 'Date', 'Time (UTC)'],
             $formatted_files
@@ -187,8 +402,9 @@ trait SnapshotTrait
         if (empty($this->snapshotFiles)) {
             $this->dockworkerIO->error(
                 sprintf(
-                    'There are no snapshots available for %s.',
-                    $env
+                    "There are no snapshot artifacts available for [%s] snapshot '%s'.",
+                    $env,
+                    $this->snapshotName
                 )
             );
             exit(1);
