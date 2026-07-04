@@ -259,35 +259,16 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
 
         $this->initK8sJobCommand($this->dockworkerIO);
 
-        // Discover the environment's snapshot CronJob by label.
-        $selector = sprintf(
-            'app.kubernetes.io/component=cronjob,app.kubernetes.io/part-of=%s',
-            $this->applicationName
-        );
-        $cronjobs = $this->findCronJobsByLabel($env, $selector);
-        if (empty($cronjobs)) {
-            $this->dockworkerIO->error(
-                sprintf(
-                    'No snapshot CronJob was found in [%s]. Ensure drupal.snapshot is enabled for this environment.',
-                    $env
-                )
-            );
-            exit(1);
-        }
-        if (count($cronjobs) > 1) {
-            $this->dockworkerIO->error(
-                sprintf(
-                    'Multiple snapshot CronJobs were found in [%s]: %s. Cannot determine which to use.',
-                    $env,
-                    implode(', ', $cronjobs)
-                )
-            );
-            exit(1);
-        }
-        $cronjob_name = $cronjobs[0];
+        // Identify the snapshot CronJob. It cannot be found by the shared
+        // "component=cronjob" label alone, because sibling CronJobs (e.g. the
+        // Drupal cron) carry the same label; the snapshot CronJob is identified
+        // by its name.
+        $cronjob_name = $this->resolveSnapshotCronJobName($env);
 
         // Single-flight: refuse if a snapshot Job (nightly or manual) is active.
-        if ($this->countActiveJobsByLabel($env, $selector) > 0) {
+        // Scoped by the CronJob name prefix so the Drupal cron's Jobs do not
+        // count as an active snapshot.
+        if ($this->countActiveJobsByNamePrefix($env, $cronjob_name) > 0) {
             $this->dockworkerIO->error(
                 sprintf(
                     'A snapshot Job is already running for this application in [%s]. Wait for it to finish before creating another.',
@@ -362,6 +343,60 @@ class DaemonSnapshotCommands extends DockworkerDaemonCommands
                 )
             );
         }
+    }
+
+    /**
+     * Resolves the name of the environment's snapshot CronJob.
+     *
+     * Sibling CronJobs (e.g. the Drupal cron) share the "component=cronjob"
+     * label, so the snapshot CronJob is identified by name: the chart names it
+     * "<tld-dashed>-snapshot". The conventional name is tried first; if it does
+     * not exist (e.g. a custom name), fall back to label discovery filtered to
+     * names ending in "-snapshot". Errors if none or several remain.
+     *
+     * @param string $env
+     *   The environment to resolve the CronJob in.
+     *
+     * @return string
+     *   The resolved snapshot CronJob name.
+     */
+    protected function resolveSnapshotCronJobName(string $env): string
+    {
+        $derived = str_replace('.', '-', $this->applicationName) . '-snapshot';
+        if ($this->getCronJobJobSpec($env, $derived) !== null) {
+            return $derived;
+        }
+
+        $selector = sprintf(
+            'app.kubernetes.io/component=cronjob,app.kubernetes.io/part-of=%s',
+            $this->applicationName
+        );
+        $candidates = array_values(
+            array_filter(
+                $this->findCronJobsByLabel($env, $selector),
+                static fn(string $name): bool => str_ends_with($name, '-snapshot')
+            )
+        );
+        if (count($candidates) === 1) {
+            return $candidates[0];
+        }
+        if (empty($candidates)) {
+            $this->dockworkerIO->error(
+                sprintf(
+                    'No snapshot CronJob was found in [%s]. Ensure drupal.snapshot is enabled for this environment.',
+                    $env
+                )
+            );
+            exit(1);
+        }
+        $this->dockworkerIO->error(
+            sprintf(
+                'Multiple snapshot CronJobs were found in [%s]: %s. Cannot determine which to use.',
+                $env,
+                implode(', ', $candidates)
+            )
+        );
+        exit(1);
     }
 
     /**

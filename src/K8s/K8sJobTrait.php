@@ -70,25 +70,28 @@ trait K8sJobTrait
     }
 
     /**
-     * Counts the active (running) Jobs in a namespace matching a selector.
+     * Counts the active (running) Jobs in a namespace whose name has a prefix.
+     *
+     * Matching by name prefix (rather than a label) isolates the Jobs belonging
+     * to a specific CronJob, since sibling CronJobs may share the same labels.
+     * A CronJob's own Jobs are named "<cronjob>-<suffix>", so the CronJob name
+     * is the natural prefix.
      *
      * @param string $env
      *   The namespace to search.
-     * @param string $selector
-     *   The kubectl label selector.
+     * @param string $prefix
+     *   The Job name prefix to match.
      *
      * @return int
      *   The total number of active Job pods across matching Jobs.
      */
-    protected function countActiveJobsByLabel(string $env, string $selector): int
+    protected function countActiveJobsByNamePrefix(string $env, string $prefix): int
     {
         $cmd = $this->kubeCtlRun(
             [
                 'get',
                 'jobs',
                 "--namespace=$env",
-                '-l',
-                $selector,
                 '-o',
                 'json',
             ],
@@ -101,7 +104,10 @@ trait K8sJobTrait
         $active = 0;
         if (is_array($data)) {
             foreach ($data['items'] ?? [] as $item) {
-                $active += (int) ($item['status']['active'] ?? 0);
+                $name = $item['metadata']['name'] ?? '';
+                if (str_starts_with($name, $prefix)) {
+                    $active += (int) ($item['status']['active'] ?? 0);
+                }
             }
         }
         return $active;
