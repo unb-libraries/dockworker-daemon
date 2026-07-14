@@ -206,7 +206,6 @@ trait SnapshotTrait
                 $this->snapshotFiles[] = $item;
             }
         }
-
     }
 
     /**
@@ -708,5 +707,4 @@ trait SnapshotTrait
     {
         $item[1] = self::bytesToHumanString((int) $item[1]);
     }
-
 }

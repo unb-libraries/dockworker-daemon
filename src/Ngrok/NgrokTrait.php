@@ -71,6 +71,5 @@ trait NgrokTrait
             ],
             'NGROK_AUTH_TOKEN'
         );
-
     }
 }
