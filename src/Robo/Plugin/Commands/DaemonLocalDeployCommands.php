@@ -69,6 +69,21 @@ class DaemonLocalDeployCommands extends DockworkerDaemonCommands implements Cust
     }
 
     /**
+     * Removes the application locally along with its images, volumes and hostfile entries.
+     *
+     * @command application:cleanup
+     * @aliases cleanup
+     *
+     * @throws \Dockworker\DockworkerException
+     */
+    public function cleanupApplication(): void
+    {
+        $this->dockworkerIO->title("Cleaning Up $this->applicationName Local Environment");
+        $this->stopRemoveComposeApplicationData(true);
+        $this->unSetLocalHostFileEntries();
+    }
+
+    /**
      * Restarts the application locally, preserving persistent data.
      *
      * @command application:restart
